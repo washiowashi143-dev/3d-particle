@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Particle Gestures - Shield Edition</title>
+    <title>Particle Gestures - Merkaba Edition</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; }
@@ -30,7 +30,6 @@
         }
         h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
         #status { font-size: 18px; color: #ffaa00; margin-top: 5px; font-weight: bold; }
-        #timer { font-size: 24px; color: #ff4444; font-weight: bold; margin-top: 5px; display: none;}
         
         #instructions {
             margin-top: 15px;
@@ -44,6 +43,7 @@
         .key { color: #ffeb3b; font-weight: bold; }
         .danger { color: #ff0000; font-weight: bold; }
         .cool { color: #00e5ff; font-weight: bold; }
+        .sacred { color: #d400ff; font-weight: bold; text-shadow: 0 0 5px #d400ff;}
 
         #loading {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -62,16 +62,15 @@
     <div id="hud">
         <h1>Particle Master</h1>
         <div id="status">Waiting for hand...</div>
-        <div id="timer"></div>
         <div id="instructions">
             <div><span class="cool">🖐️ Open Hand</span> = ENERGY SHIELD</div>
-            <div><span class="cool">✊ Fist</span> = TORNADO</div>
-            <div><span class="cool">👍 Thumb</span> = DNA HELIX</div>
+            <div><span class="cool">✊ Fist</span> = TORNADO (Fixed)</div>
+            <div><span class="sacred">👍 Thumb</span> = MERKABA (New Age)</div>
             <div><span class="key">✌️ Peace</span> = Phoenix</div>
             <div><span class="key">☝️ Point</span> = Saturn</div>
             <div><span class="key">3 Fingers</span> = Atom</div>
             <div style="margin-top:5px; border-top:1px solid #555; padding-top:5px;">
-                <span class="danger">🤘 Rock</span> = SUPER NOVA
+                <span class="danger">🤘 Rock</span> = INSTANT NOVA
             </div>
         </div>
     </div>
@@ -117,7 +116,7 @@
             document.body.appendChild(renderer.domElement);
 
             createParticleSystem();
-            setupShield(); // Start with Shield
+            setupShield(); 
             
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
@@ -159,18 +158,16 @@
                 const dist = Math.sqrt(x*x + y*y + z*z);
                 
                 if (type === 'explosion') {
-                     // White hot center
-                     colorObj.setHSL(0.1, 1.0, 0.5);
+                     colorObj.setHSL(0.1, 1.0, 0.5); // White hot
                 } else if (type === 'tornado') {
                     // Dark Grey/Blue storm
                     colorObj.setHSL(0.6, 0.5, 0.4 + (y+100)/300);
-                } else if (type === 'dna') {
-                    // Two strands: one Blue, one Pink
-                    if ((i % 2) === 0) colorObj.setHSL(0.55, 1.0, 0.5); 
-                    else colorObj.setHSL(0.9, 1.0, 0.5); 
+                } else if (type === 'merkaba') {
+                    // Sacred Geometry: Gold and Purple
+                    if (y > 0) colorObj.setHSL(0.8, 1.0, 0.6); // Purple Top
+                    else colorObj.setHSL(0.1, 1.0, 0.5); // Gold Bottom
                 } else if (type === 'shield') {
-                    // Cyan / Electric Blue
-                    colorObj.setHSL(0.5, 1.0, 0.6); 
+                    colorObj.setHSL(0.5, 1.0, 0.6); // Cyan
                 } else if (type === 'phoenix') {
                     const wingSpan = Math.abs(x);
                     colorObj.setHSL(0.05 + (0.15 - (wingSpan/1500)), 1.0, 0.5);
@@ -191,46 +188,97 @@
         // --- 3. Shape Generators ---
         let pIndex = 0;
         function resetPIndex() { pIndex = 0; }
+        
+        function fillLine(start, end, count) {
+            const vec = new THREE.Vector3().subVectors(end, start);
+            for(let k=0; k<count; k++) {
+                if(pIndex>=PARTICLE_COUNT) break;
+                const t = Math.random();
+                originalPositions[pIndex*3] = start.x + vec.x*t + (Math.random()-0.5)*2;
+                originalPositions[pIndex*3+1] = start.y + vec.y*t + (Math.random()-0.5)*2;
+                originalPositions[pIndex*3+2] = start.z + vec.z*t + (Math.random()-0.5)*2;
+                pIndex++;
+            }
+        }
 
-        // --- NEW: SHIELD GENERATOR ---
+        // --- NEW: MERKABA (Star Tetrahedron) ---
+        function setupMerkaba() {
+            if (currentShape === 'merkaba') return;
+            currentShape = 'merkaba';
+            explosionState = 'idle';
+            document.getElementById('status').innerText = "Shape: MERKABA (Sacred Geometry)";
+            document.getElementById('status').style.color = "#d400ff";
+            resetPIndex();
+
+            const s = 60; // scale
+            // Triangle 1 (Point Up)
+            const t1_top = new THREE.Vector3(0, s, 0);
+            const t1_b1 = new THREE.Vector3(s*0.8, -s*0.3, s*0.5);
+            const t1_b2 = new THREE.Vector3(-s*0.8, -s*0.3, s*0.5);
+            const t1_b3 = new THREE.Vector3(0, -s*0.3, -s);
+
+            // Triangle 2 (Point Down)
+            const t2_bot = new THREE.Vector3(0, -s, 0);
+            const t2_b1 = new THREE.Vector3(s*0.8, s*0.3, s*0.5);
+            const t2_b2 = new THREE.Vector3(-s*0.8, s*0.3, s*0.5);
+            const t2_b3 = new THREE.Vector3(0, s*0.3, -s);
+
+            // Fill Edges (Heavy particles)
+            const edgeCount = 800;
+            fillLine(t1_top, t1_b1, edgeCount); fillLine(t1_top, t1_b2, edgeCount); fillLine(t1_top, t1_b3, edgeCount);
+            fillLine(t1_b1, t1_b2, edgeCount); fillLine(t1_b2, t1_b3, edgeCount); fillLine(t1_b3, t1_b1, edgeCount);
+
+            fillLine(t2_bot, t2_b1, edgeCount); fillLine(t2_bot, t2_b2, edgeCount); fillLine(t2_bot, t2_b3, edgeCount);
+            fillLine(t2_b1, t2_b2, edgeCount); fillLine(t2_b2, t2_b3, edgeCount); fillLine(t2_b3, t2_b1, edgeCount);
+
+            // Fill Volume with Aura
+            while(pIndex < PARTICLE_COUNT) {
+                // Sphere around it
+                const r = 90 * Math.cbrt(Math.random());
+                const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
+                originalPositions[pIndex*3] = r*Math.sin(ph)*Math.cos(th);
+                originalPositions[pIndex*3+1] = r*Math.sin(ph)*Math.sin(th);
+                originalPositions[pIndex*3+2] = r*Math.cos(ph);
+                pIndex++;
+            }
+            updateColors('merkaba');
+        }
+
+        // --- SHIELD GENERATOR ---
         function setupShield() {
             if (currentShape === 'shield') return;
             currentShape = 'shield';
             explosionState = 'idle';
             document.getElementById('status').innerText = "Shape: ENERGY SHIELD";
-            document.getElementById('timer').style.display = 'none';
             document.getElementById('status').style.color = "#00ffff";
             
             resetPIndex();
-            // A curved disc
             for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const radius = Math.sqrt(Math.random()) * 80; // Radius up to 80
+                const radius = Math.sqrt(Math.random()) * 80; 
                 const angle = Math.random() * Math.PI * 2;
-                
-                // x, y form the circle
                 originalPositions[i*3] = radius * Math.cos(angle);
                 originalPositions[i*3+1] = radius * Math.sin(angle);
-                
-                // z creates the curve (sphere cap formula)
-                // The closer to center, the more forward it pops out
                 originalPositions[i*3+2] = Math.sqrt(80*80 - radius*radius) * 0.4;
             }
             updateColors('shield');
         }
 
-        // --- TORNADO ---
+        // --- FIXED TORNADO ---
         function setupTornado() {
             if (currentShape === 'tornado') return;
             currentShape = 'tornado';
             explosionState = 'idle';
             document.getElementById('status').innerText = "Shape: TORNADO";
-            document.getElementById('timer').style.display = 'none';
             document.getElementById('status').style.color = "#aaa";
 
             for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const height = (Math.random() - 0.5) * 200; 
-                const t = (height + 100) / 200; 
-                const radius = 10 + t * 60; 
+                // Made wider and taller
+                const height = (Math.random() - 0.5) * 250; 
+                const t = (height + 125) / 250; // 0 to 1 normalized height
+                
+                // Funnel shape math: Radius grows exponentially with height
+                const radius = 5 + Math.pow(t, 1.5) * 100; 
+                
                 const angle = Math.random() * Math.PI * 2;
                 
                 originalPositions[i*3] = radius * Math.cos(angle);
@@ -240,38 +288,12 @@
             updateColors('tornado');
         }
 
-        // --- DNA HELIX ---
-        function setupDNA() {
-            if (currentShape === 'dna') return;
-            currentShape = 'dna';
-            explosionState = 'idle';
-            document.getElementById('status').innerText = "Shape: DNA";
-            document.getElementById('timer').style.display = 'none';
-            document.getElementById('status').style.color = "#ff00ff";
-
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const t = Math.random() * 200 - 100;
-                const angle = t * 0.1;
-                const radius = 30;
-                const offset = (i % 2 === 0) ? 0 : Math.PI;
-                originalPositions[i*3] = radius * Math.cos(angle + offset);
-                originalPositions[i*3+1] = t;
-                originalPositions[i*3+2] = radius * Math.sin(angle + offset);
-                // Thickness
-                originalPositions[i*3] += (Math.random()-0.5)*5;
-                originalPositions[i*3+1] += (Math.random()-0.5)*5;
-                originalPositions[i*3+2] += (Math.random()-0.5)*5;
-            }
-            updateColors('dna');
-        }
-
         // --- PHOENIX ---
         function setupPhoenix() {
             if (currentShape === 'phoenix') return;
             currentShape = 'phoenix';
             explosionState = 'idle';
             document.getElementById('status').innerText = "Shape: PHOENIX";
-            document.getElementById('timer').style.display = 'none';
             document.getElementById('status').style.color = "#ff5500";
             resetPIndex();
             // Body
@@ -300,10 +322,8 @@
             currentShape = 'atom';
             explosionState = 'idle';
             document.getElementById('status').innerText = "Shape: ATOM";
-            document.getElementById('timer').style.display = 'none';
             document.getElementById('status').style.color = "#00ffff";
             resetPIndex();
-            // Nucleus
             for(let i=0; i<5000; i++) {
                  const r = 15*Math.cbrt(Math.random());
                  const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
@@ -312,7 +332,6 @@
                  originalPositions[pIndex*3+2] = r*Math.cos(ph);
                  pIndex++;
             }
-            // Shells
             while(pIndex < PARTICLE_COUNT) {
                 const r = 60 + (Math.random()-0.5)*10;
                 const a = Math.random()*Math.PI*2;
@@ -332,7 +351,6 @@
             currentShape = 'saturn';
             explosionState = 'idle';
             document.getElementById('status').innerText = "Shape: SATURN";
-            document.getElementById('timer').style.display = 'none';
             document.getElementById('status').style.color = "#ffaa00";
             for (let i = 0; i < PARTICLE_COUNT; i++) {
                  if(i < PARTICLE_COUNT*0.4) {
@@ -352,59 +370,43 @@
             updateColors('saturn');
         }
 
-        // --- 4. EXPLOSION LOGIC SEQUENCE ---
+        // --- 4. NEW EXPLOSION LOGIC (Suck -> Blast) ---
         function triggerSuperNova() {
             if (currentShape === 'nova') return;
             currentShape = 'nova';
             explosionState = 'imploding';
             explosionStartTime = clock.getElapsedTime();
             
-            document.getElementById('status').innerText = "SEQUENCE STARTED";
+            document.getElementById('status').innerText = "⚠️ IMPLOSION DETECTED";
             document.getElementById('status').style.color = "red";
-            document.getElementById('timer').style.display = 'block';
             
             updateColors('explosion');
         }
 
         function updateExplosionLogic(time) {
             const elapsed = time - explosionStartTime;
-            const timerDiv = document.getElementById('timer');
 
-            // PHASE 1: IMPLOSION (0s - 2s)
+            // PHASE 1: IMPLOSION (0s - 1.5s)
+            // Sucks particles to the center rapidly
             if (explosionState === 'imploding') {
-                timerDiv.innerText = "IMPLODING...";
                 for(let i=0; i<PARTICLE_COUNT; i++) {
-                    originalPositions[i*3] *= 0.95; 
-                    originalPositions[i*3+1] *= 0.95;
-                    originalPositions[i*3+2] *= 0.95;
+                    originalPositions[i*3] *= 0.90; // Shrink fast
+                    originalPositions[i*3+1] *= 0.90;
+                    originalPositions[i*3+2] *= 0.90;
                 }
-                if (elapsed > 2) {
-                    explosionState = 'waiting';
-                }
-            }
-            // PHASE 2: WAIT (2s - 7s)
-            else if (explosionState === 'waiting') {
-                const timeLeft = Math.ceil(7 - elapsed);
-                timerDiv.innerText = `DETONATION IN: ${timeLeft}`;
-                for(let i=0; i<PARTICLE_COUNT; i++) {
-                     originalPositions[i*3] = (Math.random()-0.5) * 5;
-                     originalPositions[i*3+1] = (Math.random()-0.5) * 5;
-                     originalPositions[i*3+2] = (Math.random()-0.5) * 5;
-                }
-                if (elapsed > 7) {
+                if (elapsed > 1.5) {
                     explosionState = 'exploding';
+                    document.getElementById('status').innerText = "💥 SUPER NOVA 💥";
+                    
+                    // Set targets to infinity IMMEDIATELY
                     for(let i=0; i<PARTICLE_COUNT; i++) {
-                        const r = 400 + Math.random()*400;
+                        const r = 400 + Math.random()*500; // Big range
                         const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
                         originalPositions[i*3] = r*Math.sin(ph)*Math.cos(th);
                         originalPositions[i*3+1] = r*Math.sin(ph)*Math.sin(th);
                         originalPositions[i*3+2] = r*Math.cos(ph);
                     }
                 }
-            }
-            // PHASE 3: BLAST
-            else if (explosionState === 'exploding') {
-                timerDiv.innerText = "BOOM!";
             }
         }
 
@@ -417,15 +419,16 @@
                 updateExplosionLogic(time);
                 particles.rotation.y += 0.05;
             } else if (currentShape === 'tornado') {
-                particles.rotation.y -= 0.15; 
+                particles.rotation.y -= 0.25; // Faster spin for new tornado
                 particles.rotation.x = 0;
-            } else if (currentShape === 'dna') {
-                particles.rotation.y = time * 0.5;
+            } else if (currentShape === 'merkaba') {
+                // Rotate awkwardly to show 3D depth
+                particles.rotation.y = time * 0.4;
+                particles.rotation.z = time * 0.2;
             } else if (currentShape === 'atom') {
                 particles.rotation.y = time * 0.5;
                 particles.rotation.z = Math.sin(time*0.5)*0.2;
             } else if (currentShape === 'shield') {
-                // Shield holds steady, maybe subtle breath
                 particles.rotation.y = 0;
                 particles.rotation.z = 0;
             } else if (currentShape === 'phoenix') {
@@ -452,7 +455,6 @@
                     oy += Math.sin(time * 3) * (Math.abs(ox) / 100) * 20;
                 }
 
-                // Physics
                 const dx = px - localHand.x;
                 const dy = py - localHand.y;
                 const dz = pz - localHand.z;
@@ -465,7 +467,8 @@
                     pArray[iy] += (dy/dist) * force * 5;
                     pArray[iz] += (dz/dist) * force * 5;
                 } else {
-                    const speed = (currentShape === 'nova' && explosionState === 'exploding') ? 0.2 : RETURN_SPEED;
+                    // During explosion phase 2, particles move very fast
+                    const speed = (currentShape === 'nova' && explosionState === 'exploding') ? 0.3 : RETURN_SPEED;
                     pArray[ix] += (ox - px) * speed;
                     pArray[iy] += (oy - py) * speed;
                     pArray[iz] += (oz - pz) * speed;
@@ -490,11 +493,16 @@
             // Rock/Metal -> SUPER NOVA
             if (fingers === 2 && lm[8].y < lm[6].y && lm[20].y < lm[18].y) return 'explode';
             
-            // Fist -> TORNADO
-            if (fingers === 0 && (lm[4].y > lm[3].y)) return 'fist'; 
-            
-            // Thumbs Up -> DNA 
-            if (fingers === 0 && lm[4].y < lm[3].y) return 'thumb';
+            // Fist Logic vs Thumbs Up Logic
+            if (fingers === 0) {
+                // Thumb is "Up" if tip is higher (smaller y) than knuckle (IP or MCP)
+                // lm[4] = Tip, lm[3] = IP, lm[2] = MCP
+                if (lm[4].y < lm[3].y && lm[4].y < lm[2].y) {
+                    return 'thumb'; // MERKABA
+                } else {
+                    return 'fist'; // TORNADO
+                }
+            }
 
             // Peace -> Phoenix
             if (fingers === 2 && lm[8].y < lm[6].y && lm[12].y < lm[10].y) return 'peace';
@@ -505,7 +513,7 @@
             // One Finger -> Saturn
             if (fingers === 1) return 'point';
             
-            // Open Hand -> SHIELD (Replaces Text)
+            // Open Hand -> SHIELD
             if (fingers >= 4) return 'open'; 
 
             return 'unknown';
@@ -531,10 +539,10 @@
                     lastGesture = gesture;
                 }
 
-                if (gestureFrameCount > 12) {
+                if (gestureFrameCount > 10) {
                     if (gesture === 'open') setupShield();
                     else if (gesture === 'fist') setupTornado();
-                    else if (gesture === 'thumb') setupDNA();
+                    else if (gesture === 'thumb') setupMerkaba(); // Replaces DNA
                     else if (gesture === 'peace') setupPhoenix();
                     else if (gesture === 'point') setupSaturn();
                     else if (gesture === 'atom') setupAtom();
