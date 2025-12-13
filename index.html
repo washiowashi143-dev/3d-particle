@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Particle Gestures - Merkaba Edition</title>
+    <title>Particle Gestures - Cosmic Edition</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; }
@@ -43,7 +43,8 @@
         .key { color: #ffeb3b; font-weight: bold; }
         .danger { color: #ff0000; font-weight: bold; }
         .cool { color: #00e5ff; font-weight: bold; }
-        .sacred { color: #d400ff; font-weight: bold; text-shadow: 0 0 5px #d400ff;}
+        .sacred { color: #d400ff; font-weight: bold; }
+        .cosmic { color: #ff00ff; font-weight: bold; text-shadow: 0 0 8px #ff00ff; }
 
         #loading {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -63,12 +64,13 @@
         <h1>Particle Master</h1>
         <div id="status">Waiting for hand...</div>
         <div id="instructions">
-            <div><span class="cool">🖐️ Open Hand</span> = ENERGY SHIELD</div>
-            <div><span class="cool">✊ Fist</span> = TORNADO (Fixed)</div>
-            <div><span class="sacred">👍 Thumb</span> = MERKABA (New Age)</div>
+            <div><span class="cosmic">👌 OK Sign</span> = BLACK HOLE</div>
+            <div><span class="cosmic">🤟 Spidey</span> = GALAXY</div>
+            <div><span class="cool">🖐️ Open</span> = SHIELD</div>
+            <div><span class="cool">🤙 Shaka</span> = TORNADO</div>
+            <div><span class="sacred">👍 Thumb</span> = MERKABA</div>
             <div><span class="key">✌️ Peace</span> = Phoenix</div>
             <div><span class="key">☝️ Point</span> = Saturn</div>
-            <div><span class="key">3 Fingers</span> = Atom</div>
             <div style="margin-top:5px; border-top:1px solid #555; padding-top:5px;">
                 <span class="danger">🤘 Rock</span> = INSTANT NOVA
             </div>
@@ -82,7 +84,7 @@
         import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
         // --- Configuration ---
-        const PARTICLE_COUNT = 20000; 
+        const PARTICLE_COUNT = 22000; 
         const INTERACTION_RADIUS = 40;
         const RETURN_SPEED = 0.08; 
         
@@ -107,8 +109,8 @@
             scene = new THREE.Scene();
             scene.fog = new THREE.FogExp2(0x000000, 0.001);
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-            camera.position.z = 150;
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
+            camera.position.z = 160;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -142,7 +144,7 @@
 
             const material = new THREE.PointsMaterial({
                 size: 0.8, vertexColors: true, blending: THREE.AdditiveBlending,
-                depthTest: false, transparent: true, opacity: 0.9
+                depthTest: false, transparent: true, opacity: 0.95
             });
 
             particles = new THREE.Points(geometry, material);
@@ -158,16 +160,26 @@
                 const dist = Math.sqrt(x*x + y*y + z*z);
                 
                 if (type === 'explosion') {
-                     colorObj.setHSL(0.1, 1.0, 0.5); // White hot
+                     colorObj.setHSL(0.1, 1.0, 0.5); 
                 } else if (type === 'tornado') {
-                    // Dark Grey/Blue storm
                     colorObj.setHSL(0.6, 0.5, 0.4 + (y+100)/300);
                 } else if (type === 'merkaba') {
-                    // Sacred Geometry: Gold and Purple
-                    if (y > 0) colorObj.setHSL(0.8, 1.0, 0.6); // Purple Top
-                    else colorObj.setHSL(0.1, 1.0, 0.5); // Gold Bottom
+                    if (y > 0) colorObj.setHSL(0.8, 1.0, 0.6); 
+                    else colorObj.setHSL(0.1, 1.0, 0.5); 
                 } else if (type === 'shield') {
-                    colorObj.setHSL(0.5, 1.0, 0.6); // Cyan
+                    colorObj.setHSL(0.5, 1.0, 0.6); 
+                } else if (type === 'blackhole') {
+                    // Inner ring: Bright Orange/White (Accretion)
+                    // Outer ring: Dark Purple
+                    if (dist < 50) colorObj.setHSL(0.08, 1.0, 0.6); 
+                    else colorObj.setHSL(0.75, 0.8, 0.3);
+                } else if (type === 'galaxy') {
+                    // Center: White/Yellow. Arms: Pink/Blue/Purple
+                    if(dist < 20) colorObj.setHSL(0.15, 1.0, 0.7);
+                    else {
+                        // Color variation based on angle to make arms distinct
+                        colorObj.setHSL(0.6 + Math.random()*0.3, 0.8, 0.6);
+                    }
                 } else if (type === 'phoenix') {
                     const wingSpan = Math.abs(x);
                     colorObj.setHSL(0.05 + (0.15 - (wingSpan/1500)), 1.0, 0.5);
@@ -201,39 +213,88 @@
             }
         }
 
-        // --- NEW: MERKABA (Star Tetrahedron) ---
+        // --- NEW: BLACK HOLE ---
+        function setupBlackHole() {
+            if (currentShape === 'blackhole') return;
+            currentShape = 'blackhole';
+            explosionState = 'idle';
+            document.getElementById('status').innerText = "Shape: SINGULARITY";
+            document.getElementById('status').style.color = "#ff8800";
+            resetPIndex();
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                // Accretion Disk
+                // No particles in the center (The Hole)
+                const r = 35 + Math.random() * 120; 
+                const angle = Math.random() * Math.PI * 2;
+                
+                originalPositions[i*3] = r * Math.cos(angle);
+                // Flattened but slightly thick
+                originalPositions[i*3+1] = (Math.random()-0.5) * (150/r) * 5; 
+                originalPositions[i*3+2] = r * Math.sin(angle);
+            }
+            updateColors('blackhole');
+        }
+
+        // --- NEW: GALAXY ---
+        function setupGalaxy() {
+            if (currentShape === 'galaxy') return;
+            currentShape = 'galaxy';
+            explosionState = 'idle';
+            document.getElementById('status').innerText = "Shape: SPIRAL GALAXY";
+            document.getElementById('status').style.color = "#ff00ff";
+            resetPIndex();
+            
+            const arms = 4;
+            const armWidth = 0.5; // Radians spread
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                // Logarithmic spiral distribution
+                // Select an arm
+                const armIndex = i % arms;
+                const r = Math.random() * 140; // Size
+                
+                // Angle increases with radius (Spiral)
+                const baseAngle = (r / 25) + (armIndex * (Math.PI * 2 / arms));
+                
+                // Add randomness to width of arm
+                const angle = baseAngle + (Math.random()-0.5) * armWidth;
+                
+                originalPositions[i*3] = r * Math.cos(angle);
+                // Thicker in middle, thinner at edges
+                originalPositions[i*3+1] = (Math.random()-0.5) * ((140-r)/140) * 40; 
+                originalPositions[i*3+2] = r * Math.sin(angle);
+            }
+            updateColors('galaxy');
+        }
+
+        // --- MERKABA ---
         function setupMerkaba() {
             if (currentShape === 'merkaba') return;
             currentShape = 'merkaba';
             explosionState = 'idle';
-            document.getElementById('status').innerText = "Shape: MERKABA (Sacred Geometry)";
+            document.getElementById('status').innerText = "Shape: MERKABA";
             document.getElementById('status').style.color = "#d400ff";
             resetPIndex();
 
-            const s = 60; // scale
-            // Triangle 1 (Point Up)
+            const s = 60; 
             const t1_top = new THREE.Vector3(0, s, 0);
             const t1_b1 = new THREE.Vector3(s*0.8, -s*0.3, s*0.5);
             const t1_b2 = new THREE.Vector3(-s*0.8, -s*0.3, s*0.5);
             const t1_b3 = new THREE.Vector3(0, -s*0.3, -s);
 
-            // Triangle 2 (Point Down)
             const t2_bot = new THREE.Vector3(0, -s, 0);
             const t2_b1 = new THREE.Vector3(s*0.8, s*0.3, s*0.5);
             const t2_b2 = new THREE.Vector3(-s*0.8, s*0.3, s*0.5);
             const t2_b3 = new THREE.Vector3(0, s*0.3, -s);
 
-            // Fill Edges (Heavy particles)
             const edgeCount = 800;
             fillLine(t1_top, t1_b1, edgeCount); fillLine(t1_top, t1_b2, edgeCount); fillLine(t1_top, t1_b3, edgeCount);
             fillLine(t1_b1, t1_b2, edgeCount); fillLine(t1_b2, t1_b3, edgeCount); fillLine(t1_b3, t1_b1, edgeCount);
-
             fillLine(t2_bot, t2_b1, edgeCount); fillLine(t2_bot, t2_b2, edgeCount); fillLine(t2_bot, t2_b3, edgeCount);
             fillLine(t2_b1, t2_b2, edgeCount); fillLine(t2_b2, t2_b3, edgeCount); fillLine(t2_b3, t2_b1, edgeCount);
 
-            // Fill Volume with Aura
             while(pIndex < PARTICLE_COUNT) {
-                // Sphere around it
                 const r = 90 * Math.cbrt(Math.random());
                 const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
                 originalPositions[pIndex*3] = r*Math.sin(ph)*Math.cos(th);
@@ -244,7 +305,7 @@
             updateColors('merkaba');
         }
 
-        // --- SHIELD GENERATOR ---
+        // --- SHIELD ---
         function setupShield() {
             if (currentShape === 'shield') return;
             currentShape = 'shield';
@@ -263,7 +324,7 @@
             updateColors('shield');
         }
 
-        // --- FIXED TORNADO ---
+        // --- TORNADO ---
         function setupTornado() {
             if (currentShape === 'tornado') return;
             currentShape = 'tornado';
@@ -272,13 +333,9 @@
             document.getElementById('status').style.color = "#aaa";
 
             for (let i = 0; i < PARTICLE_COUNT; i++) {
-                // Made wider and taller
                 const height = (Math.random() - 0.5) * 250; 
-                const t = (height + 125) / 250; // 0 to 1 normalized height
-                
-                // Funnel shape math: Radius grows exponentially with height
+                const t = (height + 125) / 250; 
                 const radius = 5 + Math.pow(t, 1.5) * 100; 
-                
                 const angle = Math.random() * Math.PI * 2;
                 
                 originalPositions[i*3] = radius * Math.cos(angle);
@@ -370,37 +427,30 @@
             updateColors('saturn');
         }
 
-        // --- 4. NEW EXPLOSION LOGIC (Suck -> Blast) ---
+        // --- 4. EXPLOSION LOGIC ---
         function triggerSuperNova() {
             if (currentShape === 'nova') return;
             currentShape = 'nova';
             explosionState = 'imploding';
             explosionStartTime = clock.getElapsedTime();
-            
             document.getElementById('status').innerText = "⚠️ IMPLOSION DETECTED";
             document.getElementById('status').style.color = "red";
-            
             updateColors('explosion');
         }
 
         function updateExplosionLogic(time) {
             const elapsed = time - explosionStartTime;
-
-            // PHASE 1: IMPLOSION (0s - 1.5s)
-            // Sucks particles to the center rapidly
             if (explosionState === 'imploding') {
                 for(let i=0; i<PARTICLE_COUNT; i++) {
-                    originalPositions[i*3] *= 0.90; // Shrink fast
+                    originalPositions[i*3] *= 0.90; 
                     originalPositions[i*3+1] *= 0.90;
                     originalPositions[i*3+2] *= 0.90;
                 }
                 if (elapsed > 1.5) {
                     explosionState = 'exploding';
                     document.getElementById('status').innerText = "💥 SUPER NOVA 💥";
-                    
-                    // Set targets to infinity IMMEDIATELY
                     for(let i=0; i<PARTICLE_COUNT; i++) {
-                        const r = 400 + Math.random()*500; // Big range
+                        const r = 400 + Math.random()*500; 
                         const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
                         originalPositions[i*3] = r*Math.sin(ph)*Math.cos(th);
                         originalPositions[i*3+1] = r*Math.sin(ph)*Math.sin(th);
@@ -419,12 +469,19 @@
                 updateExplosionLogic(time);
                 particles.rotation.y += 0.05;
             } else if (currentShape === 'tornado') {
-                particles.rotation.y -= 0.25; // Faster spin for new tornado
+                particles.rotation.y -= 0.25; 
                 particles.rotation.x = 0;
             } else if (currentShape === 'merkaba') {
-                // Rotate awkwardly to show 3D depth
                 particles.rotation.y = time * 0.4;
                 particles.rotation.z = time * 0.2;
+            } else if (currentShape === 'blackhole') {
+                // Intense spin
+                particles.rotation.y -= 0.05;
+                particles.rotation.x = 0.5; // Tilted view
+            } else if (currentShape === 'galaxy') {
+                // Majestic slow spin
+                particles.rotation.y = time * 0.1;
+                particles.rotation.x = 0.3; // Tilted
             } else if (currentShape === 'atom') {
                 particles.rotation.y = time * 0.5;
                 particles.rotation.z = Math.sin(time*0.5)*0.2;
@@ -455,6 +512,18 @@
                     oy += Math.sin(time * 3) * (Math.abs(ox) / 100) * 20;
                 }
 
+                // Black Hole Physics: Particles near center spin faster
+                if (currentShape === 'blackhole') {
+                    const dist = Math.sqrt(ox*ox + oz*oz);
+                    if (dist < 80) {
+                        const angle = time * (100/dist); // Faster if closer
+                        const r = dist;
+                        const initialAngle = Math.atan2(oz, ox);
+                        ox = r * Math.cos(initialAngle + angle);
+                        oz = r * Math.sin(initialAngle + angle);
+                    }
+                }
+
                 const dx = px - localHand.x;
                 const dy = py - localHand.y;
                 const dz = pz - localHand.z;
@@ -467,7 +536,6 @@
                     pArray[iy] += (dy/dist) * force * 5;
                     pArray[iz] += (dz/dist) * force * 5;
                 } else {
-                    // During explosion phase 2, particles move very fast
                     const speed = (currentShape === 'nova' && explosionState === 'exploding') ? 0.3 : RETURN_SPEED;
                     pArray[ix] += (ox - px) * speed;
                     pArray[iy] += (oy - py) * speed;
@@ -487,22 +555,36 @@
             return count;
         }
 
+        function calculateDistance(p1, p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
         function detectGesture(lm) {
             const fingers = countFingers(lm);
             
             // Rock/Metal -> SUPER NOVA
             if (fingers === 2 && lm[8].y < lm[6].y && lm[20].y < lm[18].y) return 'explode';
             
-            // Fist Logic vs Thumbs Up Logic
-            if (fingers === 0) {
-                // Thumb is "Up" if tip is higher (smaller y) than knuckle (IP or MCP)
-                // lm[4] = Tip, lm[3] = IP, lm[2] = MCP
-                if (lm[4].y < lm[3].y && lm[4].y < lm[2].y) {
-                    return 'thumb'; // MERKABA
-                } else {
-                    return 'fist'; // TORNADO
-                }
+            // OK Sign -> BLACK HOLE
+            // Thumb tip and Index tip are close
+            const thumbIndexDist = calculateDistance(lm[4], lm[8]);
+            if (thumbIndexDist < 0.05 && lm[12].y < lm[10].y && lm[16].y < lm[14].y) {
+                return 'ok';
             }
+
+            // Spider-Man -> GALAXY
+            // Thumb, Index, Pinky Open. Middle, Ring Closed.
+            if (fingers === 3 && lm[8].y < lm[6].y && lm[20].y < lm[18].y && lm[12].y > lm[10].y && lm[16].y > lm[14].y) {
+                // Check thumb is out
+                 if (lm[4].x < lm[3].x) return 'spidey'; // Right hand logic approx
+                 return 'spidey';
+            }
+
+            // SHAKA -> TORNADO
+            if (fingers === 1 && lm[20].y < lm[18].y && lm[4].y < lm[3].y) return 'shaka';
+
+            // Thumbs Up -> MERKABA
+            if (fingers === 0 && lm[4].y < lm[3].y) return 'thumb';
 
             // Peace -> Phoenix
             if (fingers === 2 && lm[8].y < lm[6].y && lm[12].y < lm[10].y) return 'peace';
@@ -541,11 +623,13 @@
 
                 if (gestureFrameCount > 10) {
                     if (gesture === 'open') setupShield();
-                    else if (gesture === 'fist') setupTornado();
-                    else if (gesture === 'thumb') setupMerkaba(); // Replaces DNA
+                    else if (gesture === 'shaka') setupTornado(); 
+                    else if (gesture === 'thumb') setupMerkaba();
                     else if (gesture === 'peace') setupPhoenix();
                     else if (gesture === 'point') setupSaturn();
                     else if (gesture === 'atom') setupAtom();
+                    else if (gesture === 'ok') setupBlackHole();
+                    else if (gesture === 'spidey') setupGalaxy();
                     else if (gesture === 'explode') triggerSuperNova();
                 }
             } else {
