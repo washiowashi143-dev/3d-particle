@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Particle Gestures - Ultimate</title>
+    <title>Particle Gestures - Zero Conflict</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; }
@@ -29,22 +29,25 @@
             pointer-events: none;
         }
         h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
-        #status { font-size: 18px; color: #ffaa00; margin-top: 5px; font-weight: bold; }
+        #status { font-size: 24px; color: #ffffff; margin-top: 5px; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
         
         #instructions {
             margin-top: 15px;
             font-size: 14px;
-            color: rgba(255,255,255,0.7);
+            color: rgba(255,255,255,0.8);
             line-height: 1.6;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.7);
             padding: 15px;
             border-radius: 8px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
         }
         .key { color: #ffeb3b; font-weight: bold; }
         .danger { color: #ff0000; font-weight: bold; }
         .cool { color: #00e5ff; font-weight: bold; }
         .sacred { color: #d400ff; font-weight: bold; }
-        .cosmic { color: #ff00ff; font-weight: bold; text-shadow: 0 0 8px #ff00ff; }
+        .cosmic { color: #ff00ff; font-weight: bold; }
 
         #loading {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -64,15 +67,16 @@
         <h1>Particle Master</h1>
         <div id="status">Waiting for hand...</div>
         <div id="instructions">
-            <div><span class="cosmic">👆 L-Shape</span> = GALAXY (Fixed)</div>
-            <div><span class="cosmic">👌 OK Sign</span> = BLACK HOLE</div>
-            <div><span class="cool">🖐️ Open</span> = SHIELD</div>
-            <div><span class="cool">🤙 Shaka</span> = TORNADO</div>
-            <div><span class="sacred">👍 Thumb</span> = MERKABA</div>
-            <div><span class="key">✌️ Peace</span> = Phoenix</div>
-            <div><span class="key">☝️ Point</span> = Saturn</div>
-            <div style="margin-top:5px; border-top:1px solid #555; padding-top:5px;">
-                <span class="danger">🤘 Rock</span> = INSTANT NOVA
+            <div><span class="cool">🖐️ Open</span><br>SHIELD</div>
+            <div><span class="danger">✊ Fist</span><br>BLACK HOLE</div>
+            <div><span class="cool">🤙 Shaka</span><br>TORNADO</div>
+            <div><span class="sacred">👍 Thumb</span><br>MERKABA</div>
+            <div><span class="key">✌️ Peace</span><br>PHOENIX</div>
+            <div><span class="key">☝️ Point</span><br>SATURN</div>
+            <div><span class="key">3 Finger</span><br>ATOM</div>
+            <div><span class="cosmic">👆 L-Sign</span><br>GALAXY</div>
+            <div style="grid-column: span 2; border-top: 1px solid #555; padding-top:5px; text-align:center;">
+                <span class="danger">🤘 Rock</span> = NOVA BLAST
             </div>
         </div>
     </div>
@@ -207,15 +211,14 @@
             }
         }
 
-        // --- BLACK HOLE ---
+        // --- SHAPE: BLACK HOLE ---
         function setupBlackHole() {
             if (currentShape === 'blackhole') return;
             currentShape = 'blackhole';
             explosionState = 'idle';
-            document.getElementById('status').innerText = "Shape: SINGULARITY";
+            document.getElementById('status').innerText = "BLACK HOLE";
             document.getElementById('status').style.color = "#ff8800";
             resetPIndex();
-
             for (let i = 0; i < PARTICLE_COUNT; i++) {
                 const r = 35 + Math.random() * 120; 
                 const angle = Math.random() * Math.PI * 2;
@@ -226,24 +229,20 @@
             updateColors('blackhole');
         }
 
-        // --- GALAXY ---
+        // --- SHAPE: GALAXY ---
         function setupGalaxy() {
             if (currentShape === 'galaxy') return;
             currentShape = 'galaxy';
             explosionState = 'idle';
-            document.getElementById('status').innerText = "Shape: SPIRAL GALAXY";
+            document.getElementById('status').innerText = "SPIRAL GALAXY";
             document.getElementById('status').style.color = "#ff00ff";
             resetPIndex();
-            
-            const arms = 4;
-            const armWidth = 0.5; 
-
+            const arms = 4; const armWidth = 0.5; 
             for (let i = 0; i < PARTICLE_COUNT; i++) {
                 const armIndex = i % arms;
                 const r = Math.random() * 140; 
                 const baseAngle = (r / 25) + (armIndex * (Math.PI * 2 / arms));
                 const angle = baseAngle + (Math.random()-0.5) * armWidth;
-                
                 originalPositions[i*3] = r * Math.cos(angle);
                 originalPositions[i*3+1] = (Math.random()-0.5) * ((140-r)/140) * 40; 
                 originalPositions[i*3+2] = r * Math.sin(angle);
@@ -251,15 +250,14 @@
             updateColors('galaxy');
         }
 
-        // --- MERKABA ---
+        // --- SHAPE: MERKABA ---
         function setupMerkaba() {
             if (currentShape === 'merkaba') return;
             currentShape = 'merkaba';
             explosionState = 'idle';
-            document.getElementById('status').innerText = "Shape: MERKABA";
+            document.getElementById('status').innerText = "MERKABA";
             document.getElementById('status').style.color = "#d400ff";
             resetPIndex();
-
             const s = 60; 
             const t1_top = new THREE.Vector3(0, s, 0);
             const t1_b1 = new THREE.Vector3(s*0.8, -s*0.3, s*0.5);
@@ -269,13 +267,11 @@
             const t2_b1 = new THREE.Vector3(s*0.8, s*0.3, s*0.5);
             const t2_b2 = new THREE.Vector3(-s*0.8, s*0.3, s*0.5);
             const t2_b3 = new THREE.Vector3(0, s*0.3, -s);
-
             const edgeCount = 800;
             fillLine(t1_top, t1_b1, edgeCount); fillLine(t1_top, t1_b2, edgeCount); fillLine(t1_top, t1_b3, edgeCount);
             fillLine(t1_b1, t1_b2, edgeCount); fillLine(t1_b2, t1_b3, edgeCount); fillLine(t1_b3, t1_b1, edgeCount);
             fillLine(t2_bot, t2_b1, edgeCount); fillLine(t2_bot, t2_b2, edgeCount); fillLine(t2_bot, t2_b3, edgeCount);
             fillLine(t2_b1, t2_b2, edgeCount); fillLine(t2_b2, t2_b3, edgeCount); fillLine(t2_b3, t2_b1, edgeCount);
-
             while(pIndex < PARTICLE_COUNT) {
                 const r = 90 * Math.cbrt(Math.random());
                 const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
@@ -287,14 +283,13 @@
             updateColors('merkaba');
         }
 
-        // --- SHIELD ---
+        // --- SHAPE: SHIELD ---
         function setupShield() {
             if (currentShape === 'shield') return;
             currentShape = 'shield';
             explosionState = 'idle';
-            document.getElementById('status').innerText = "Shape: ENERGY SHIELD";
+            document.getElementById('status').innerText = "ENERGY SHIELD";
             document.getElementById('status').style.color = "#00ffff";
-            
             resetPIndex();
             for (let i = 0; i < PARTICLE_COUNT; i++) {
                 const radius = Math.sqrt(Math.random()) * 80; 
@@ -306,20 +301,18 @@
             updateColors('shield');
         }
 
-        // --- TORNADO ---
+        // --- SHAPE: TORNADO ---
         function setupTornado() {
             if (currentShape === 'tornado') return;
             currentShape = 'tornado';
             explosionState = 'idle';
-            document.getElementById('status').innerText = "Shape: TORNADO";
+            document.getElementById('status').innerText = "TORNADO";
             document.getElementById('status').style.color = "#aaa";
-
             for (let i = 0; i < PARTICLE_COUNT; i++) {
                 const height = (Math.random() - 0.5) * 250; 
                 const t = (height + 125) / 250; 
                 const radius = 5 + Math.pow(t, 1.5) * 100; 
                 const angle = Math.random() * Math.PI * 2;
-                
                 originalPositions[i*3] = radius * Math.cos(angle);
                 originalPositions[i*3+1] = height;
                 originalPositions[i*3+2] = radius * Math.sin(angle);
@@ -327,12 +320,12 @@
             updateColors('tornado');
         }
 
-        // --- PHOENIX ---
+        // --- SHAPE: PHOENIX ---
         function setupPhoenix() {
             if (currentShape === 'phoenix') return;
             currentShape = 'phoenix';
             explosionState = 'idle';
-            document.getElementById('status').innerText = "Shape: PHOENIX";
+            document.getElementById('status').innerText = "PHOENIX";
             document.getElementById('status').style.color = "#ff5500";
             resetPIndex();
             // Body
@@ -355,12 +348,12 @@
             updateColors('phoenix');
         }
 
-        // --- ATOM ---
+        // --- SHAPE: ATOM ---
         function setupAtom() {
             if (currentShape === 'atom') return;
             currentShape = 'atom';
             explosionState = 'idle';
-            document.getElementById('status').innerText = "Shape: ATOM";
+            document.getElementById('status').innerText = "ATOM";
             document.getElementById('status').style.color = "#00ffff";
             resetPIndex();
             for(let i=0; i<5000; i++) {
@@ -384,12 +377,12 @@
             updateColors('atom');
         }
         
-        // --- SATURN ---
+        // --- SHAPE: SATURN ---
         function setupSaturn() {
              if (currentShape === 'saturn') return;
             currentShape = 'saturn';
             explosionState = 'idle';
-            document.getElementById('status').innerText = "Shape: SATURN";
+            document.getElementById('status').innerText = "SATURN";
             document.getElementById('status').style.color = "#ffaa00";
             for (let i = 0; i < PARTICLE_COUNT; i++) {
                  if(i < PARTICLE_COUNT*0.4) {
@@ -409,13 +402,13 @@
             updateColors('saturn');
         }
 
-        // --- 4. EXPLOSION LOGIC ---
+        // --- EXPLOSION LOGIC ---
         function triggerSuperNova() {
             if (currentShape === 'nova') return;
             currentShape = 'nova';
             explosionState = 'imploding';
             explosionStartTime = clock.getElapsedTime();
-            document.getElementById('status').innerText = "⚠️ IMPLOSION DETECTED";
+            document.getElementById('status').innerText = "⚠️ IMPLOSION";
             document.getElementById('status').style.color = "red";
             updateColors('explosion');
         }
@@ -430,7 +423,7 @@
                 }
                 if (elapsed > 1.5) {
                     explosionState = 'exploding';
-                    document.getElementById('status').innerText = "💥 SUPER NOVA 💥";
+                    document.getElementById('status').innerText = "💥 SUPER NOVA";
                     for(let i=0; i<PARTICLE_COUNT; i++) {
                         const r = 400 + Math.random()*500; 
                         const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
@@ -525,56 +518,68 @@
         }
 
         // --- 6. MediaPipe Gesture Logic ---
-        function countFingers(lm) {
-            let count = 0;
-            if (lm[8].y < lm[6].y) count++; 
-            if (lm[12].y < lm[10].y) count++; 
-            if (lm[16].y < lm[14].y) count++; 
-            if (lm[20].y < lm[18].y) count++; 
-            return count;
+        
+        // Helper: Check if a finger is extended (Tip above PIP joint)
+        function isFingerUp(landmarks, fingerIndex) {
+            const tip = landmarks[fingerIndex * 4 + 4];
+            const pip = landmarks[fingerIndex * 4 + 2];
+            return tip.y < pip.y; // Y is inverted in MediaPipe usually, but we check relative
         }
 
-        function calculateDistance(p1, p2) {
-            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        // Helper: Check if thumb is extended (Tip far from MCP x-wise or y-wise depending on hand)
+        function isThumbUp(landmarks) {
+            const tip = landmarks[4];
+            const ip = landmarks[3];
+            const mcp = landmarks[2];
+            // Simple check: Tip is "higher" than IP (screen coordinates)
+            // Note: This works best for upright hand. 
+            // Better check: Distance from Index MCP
+            const indexMcp = landmarks[5];
+            const dist = Math.sqrt(Math.pow(tip.x - indexMcp.x, 2) + Math.pow(tip.y - indexMcp.y, 2));
+            return dist > 0.08; // Threshold for "extended"
         }
 
         function detectGesture(lm) {
-            const fingers = countFingers(lm);
-            
-            // Rock/Metal -> SUPER NOVA (Index + Pinky UP)
-            if (fingers === 2 && lm[8].y < lm[6].y && lm[20].y < lm[18].y) return 'explode';
-            
-            // OK Sign -> BLACK HOLE
-            const thumbIndexDist = calculateDistance(lm[4], lm[8]);
-            if (thumbIndexDist < 0.05 && lm[12].y < lm[10].y && lm[16].y < lm[14].y) {
-                return 'ok';
-            }
+            // 1. Determine state of each finger (0=Folded, 1=Extended)
+            const thumb = isThumbUp(lm) ? 1 : 0;
+            const index = isFingerUp(lm, 1) ? 1 : 0;
+            const middle = isFingerUp(lm, 2) ? 1 : 0;
+            const ring = isFingerUp(lm, 3) ? 1 : 0;
+            const pinky = isFingerUp(lm, 4) ? 1 : 0;
 
-            // L-Shape -> GALAXY (Index Up, Thumb Out)
-            // fingers must be 1 (Index only)
-            // Thumb Tip X must be far from Index MCP X (Thumb is sticking out)
-            // Note: Direction depends on hand (Left vs Right), but generally distance check works
-            if (fingers === 1) {
-                const thumbOutDist = calculateDistance(lm[4], lm[2]); // Tip to MCP
-                // If Thumb tip is far from palm/index base, it is extended
-                if (thumbOutDist > 0.1) return 'l_shape'; 
-                else return 'point'; // Saturn (Thumb tucked)
-            }
+            // 2. Create Signature
+            const sig = `${thumb}${index}${middle}${ring}${pinky}`;
 
-            // SHAKA -> TORNADO
-            if (fingers === 1 && lm[20].y < lm[18].y && lm[4].y < lm[3].y) return 'shaka';
-
-            // Thumbs Up -> MERKABA
-            if (fingers === 0 && lm[4].y < lm[3].y) return 'thumb';
-
-            // Peace -> Phoenix
-            if (fingers === 2 && lm[8].y < lm[6].y && lm[12].y < lm[10].y) return 'peace';
+            // 3. Match Signature to Gesture
+            // Note: Allowing slight variations for difficult gestures
             
-            // 3 Fingers -> Atom
-            if (fingers === 3 && lm[20].y > lm[18].y) return 'atom';
+            // FIST (00000) -> BLACK HOLE
+            if (sig === '00000') return 'blackhole';
             
-            // Open Hand -> SHIELD
-            if (fingers >= 4) return 'open'; 
+            // POINT (01000) -> SATURN
+            if (sig === '01000') return 'point';
+            
+            // THUMB (10000) -> MERKABA
+            if (sig === '10000') return 'thumb';
+
+            // PEACE (01100) -> PHOENIX
+            if (sig === '01100') return 'peace';
+            
+            // L-SIGN (11000) -> GALAXY
+            if (sig === '11000') return 'l_shape';
+            
+            // ROCK (01001) -> EXPLOSION
+            if (sig === '01001') return 'explode';
+            
+            // SHAKA (10001) -> TORNADO
+            if (sig === '10001') return 'shaka';
+            
+            // 3-FINGERS (01110) -> ATOM
+            if (sig === '01110') return 'atom';
+            
+            // OPEN (11111) -> SHIELD
+            // Also accept 01111 (thumb tucked)
+            if (sig === '11111' || sig === '01111') return 'open';
 
             return 'unknown';
         }
@@ -599,14 +604,14 @@
                     lastGesture = gesture;
                 }
 
-                if (gestureFrameCount > 10) {
+                if (gestureFrameCount > 8) {
                     if (gesture === 'open') setupShield();
                     else if (gesture === 'shaka') setupTornado(); 
                     else if (gesture === 'thumb') setupMerkaba();
                     else if (gesture === 'peace') setupPhoenix();
                     else if (gesture === 'point') setupSaturn();
                     else if (gesture === 'atom') setupAtom();
-                    else if (gesture === 'ok') setupBlackHole();
+                    else if (gesture === 'blackhole') setupBlackHole();
                     else if (gesture === 'l_shape') setupGalaxy();
                     else if (gesture === 'explode') triggerSuperNova();
                 }
@@ -631,4 +636,3 @@
     </script>
 </body>
 </html>
-
