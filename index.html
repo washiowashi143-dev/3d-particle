@@ -3,38 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Hand Interactive Particles</title>
+    <title>3D Hand Interactive Particles - Shapes</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
         canvas { display: block; }
         #video-container {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            width: 160px;
-            height: 120px;
+            top: 10px; left: 10px;
+            width: 160px; height: 120px;
             z-index: 10;
-            border: 2px solid #333;
-            border-radius: 8px;
-            overflow: hidden;
-            opacity: 0.7;
+            border: 2px solid #333; border-radius: 8px; overflow: hidden; opacity: 0.7;
         }
-        video {
-            width: 100%;
-            height: 100%;
-            transform: scaleX(-1); /* Mirror the video */
-            object-fit: cover;
-        }
+        video { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
         #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-family: sans-serif;
-            font-size: 24px;
-            pointer-events: none;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-size: 24px; pointer-events: none;
         }
+        /* Controls UI */
+        #controls {
+            position: absolute; top: 10px; right: 10px;
+            display: flex; flex-direction: column; gap: 10px; z-index: 20;
+        }
+        button {
+            padding: 10px 20px; background: rgba(255,255,255,0.2); color: white;
+            border: 1px solid rgba(255,255,255,0.4); cursor: pointer; border-radius: 4px;
+            transition: background 0.3s;
+        }
+        button:hover { background: rgba(255,255,255,0.4); }
     </style>
 </head>
 <body>
@@ -45,9 +40,15 @@
         <video id="input-video" playsinline></video>
     </div>
 
+    <div id="controls">
+        <button id="btn-cube">Cube</button>
+        <button id="btn-circle">Circle Disc</button>
+        <button id="btn-heart">Heart</button>
+        <button id="btn-saturn">Saturn</button>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     
     <script type="module">
@@ -55,144 +56,210 @@
 
         // --- Configuration ---
         const PARTICLE_COUNT = 15000;
-        const INTERACTION_RADIUS = 30; // Radius of hand influence
-        const RETURN_SPEED = 0.05;     // How fast particles return to original spot
-        const MOUSE_FORCE = 50;        // Strength of the push
-
+        const INTERACTION_RADIUS = 35; 
+        const RETURN_SPEED = 0.08;     
+        
         // --- Global Variables ---
-        let scene, camera, renderer;
-        let particles, positions, originalPositions;
-        let handPosition = new THREE.Vector3(9999, 9999, 9999); // Start far away
+        let scene, camera, renderer, particles;
+        // 'positions' is current location, 'originalPositions' is the target shape location
+        let positions, originalPositions, colors;
+        let handPosition = new THREE.Vector3(9999, 9999, 9999); 
         const clock = new THREE.Clock();
+        const colorObj = new THREE.Color();
 
         // --- 1. Three.js Setup ---
         function initThree() {
             scene = new THREE.Scene();
-            // Add some fog for depth
-            scene.fog = new THREE.FogExp2(0x000000, 0.002);
+            scene.fog = new THREE.FogExp2(0x000000, 0.0015);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 100;
+            camera.position.z = 120;
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            createParticles();
+            initParticleBuffers();
+            setupCube(); // Start with a cube
             
             window.addEventListener('resize', onWindowResize);
+            setupEventListeners();
             animate();
         }
 
-        // --- 2. Particle System ---
-        function createParticles() {
+        function setupEventListeners() {
+            document.getElementById('btn-cube').addEventListener('click', setupCube);
+            document.getElementById('btn-circle').addEventListener('click', setupCircle);
+            document.getElementById('btn-heart').addEventListener('click', setupHeart);
+            document.getElementById('btn-saturn').addEventListener('click', setupSaturn);
+        }
+
+        // --- 2. Particle System Core ---
+        function initParticleBuffers() {
             const geometry = new THREE.BufferGeometry();
             positions = new Float32Array(PARTICLE_COUNT * 3);
             originalPositions = new Float32Array(PARTICLE_COUNT * 3);
-            const colors = new Float32Array(PARTICLE_COUNT * 3);
+            colors = new Float32Array(PARTICLE_COUNT * 3);
 
-            const colorObj = new THREE.Color();
-
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                // Create a cube shape of particles
-                const x = (Math.random() - 0.5) * 100;
-                const y = (Math.random() - 0.5) * 100;
-                const z = (Math.random() - 0.5) * 100;
-
-                positions[i * 3] = x;
-                positions[i * 3 + 1] = y;
-                positions[i * 3 + 2] = z;
-
-                originalPositions[i * 3] = x;
-                originalPositions[i * 3 + 1] = y;
-                originalPositions[i * 3 + 2] = z;
-
-                // Color gradient based on position
-                colorObj.setHSL((x + 50) / 100, 1.0, 0.5);
-                colors[i * 3] = colorObj.r;
-                colors[i * 3 + 1] = colorObj.g;
-                colors[i * 3 + 2] = colorObj.b;
+            // Initialize positions randomly first so they don't all start at 0,0,0
+            for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
+                 positions[i] = (Math.random() - 0.5) * 200;
             }
 
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
             const material = new THREE.PointsMaterial({
-                size: 0.8,
-                vertexColors: true,
-                blending: THREE.AdditiveBlending,
-                depthTest: false,
-                transparent: true
+                size: 0.9, vertexColors: true, blending: THREE.AdditiveBlending,
+                depthTest: false, transparent: true
             });
 
             particles = new THREE.Points(geometry, material);
             scene.add(particles);
         }
 
+        // Helper to update colors based on new positions
+        function updateColors() {
+             for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const x = originalPositions[i * 3];
+                const y = originalPositions[i * 3 + 1];
+                const z = originalPositions[i * 3 + 2];
+                // Color based on distance from center
+                const dist = Math.sqrt(x*x + y*y + z*z);
+                colorObj.setHSL(dist / 100, 0.8, 0.6);
+                colors[i * 3] = colorObj.r;
+                colors[i * 3 + 1] = colorObj.g;
+                colors[i * 3 + 2] = colorObj.b;
+            }
+            particles.geometry.attributes.color.needsUpdate = true;
+        }
+
+
+        // --- Shape Definitions ---
+
+        function setupCube() {
+            const side = 80;
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                originalPositions[i*3] = (Math.random() - 0.5) * side;
+                originalPositions[i*3+1] = (Math.random() - 0.5) * side;
+                originalPositions[i*3+2] = (Math.random() - 0.5) * side;
+            }
+            updateColors();
+        }
+
+        function setupCircle() {
+            const maxRadius = 60;
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                // Square root distribution for even filling of circle
+                const radius = maxRadius * Math.sqrt(Math.random());
+                const angle = Math.random() * Math.PI * 2;
+
+                originalPositions[i*3] = radius * Math.cos(angle);
+                originalPositions[i*3+1] = radius * Math.sin(angle);
+                // Slight Z variation for disc thickness
+                originalPositions[i*3+2] = (Math.random() - 0.5) * 5; 
+            }
+            updateColors();
+        }
+
+        function setupHeart() {
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const t = Math.random() * Math.PI * 2;
+                // Heart parametric equations
+                let x = 16 * Math.pow(Math.sin(t), 3);
+                let y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                
+                // Scale and fill
+                const scale = 3.5 * Math.sqrt(Math.random());
+                x *= scale;
+                y *= scale;
+
+                originalPositions[i*3] = x;
+                originalPositions[i*3+1] = y + 20; // Shift up slightly
+                originalPositions[i*3+2] = (Math.random() - 0.5) * 10;
+            }
+            updateColors();
+        }
+
+        function setupSaturn() {
+             const sphereCount = Math.floor(PARTICLE_COUNT * 0.6);
+             const ringCount = PARTICLE_COUNT - sphereCount;
+             const planetRadius = 35;
+
+             // Planet Sphere
+             for (let i = 0; i < sphereCount; i++) {
+                // Spherical distribution
+                const u = Math.random();
+                const v = Math.random();
+                const theta = 2 * Math.PI * u;
+                const phi = Math.acos(2 * v - 1);
+
+                originalPositions[i*3] = planetRadius * Math.sin(phi) * Math.cos(theta);
+                originalPositions[i*3+1] = planetRadius * Math.sin(phi) * Math.sin(theta);
+                originalPositions[i*3+2] = planetRadius * Math.cos(phi);
+             }
+
+             // Rings
+             for (let i = sphereCount; i < PARTICLE_COUNT; i++) {
+                const ringRadius = 50 + Math.random() * 30; // Inner 50, Outer 80
+                const angle = Math.random() * Math.PI * 2;
+
+                originalPositions[i*3] = ringRadius * Math.cos(angle);
+                // Flatten the ring on Y axis
+                originalPositions[i*3+1] = (Math.random() - 0.5) * 2; 
+                originalPositions[i*3+2] = ringRadius * Math.sin(angle);
+             }
+             updateColors();
+        }
+
+
         // --- 3. Animation & Interaction Loop ---
         function animate() {
             requestAnimationFrame(animate);
-
             const time = clock.getElapsedTime();
 
-            // Rotate the entire cloud slightly
-            particles.rotation.y = time * 0.1;
-            particles.rotation.x = Math.sin(time * 0.2) * 0.1;
-
-            updateParticles();
+            // Slow base rotation
+            particles.rotation.y = time * 0.05;
             
+            // Special rotation for Saturn tilt if it's selected (optional check)
+            // particles.rotation.z = Math.sin(time * 0.1) * 0.1; 
+
+            updateParticlePhysics();
             renderer.render(scene, camera);
         }
 
-        function updateParticles() {
-            // Need to transform hand position into local particle space because the particle system is rotating
-            // However, for simplicity, we will assume hand interacts in World Space.
-            // Let's get World Coordinates of particles.
-            // To save CPU, we do physics in Local Space. We must transform "Hand" into Local Space.
-            
+        function updateParticlePhysics() {
+            // Transform hand position from World into Local particle space
             const localHand = handPosition.clone();
-            
-            // Inverse the rotation of the particle system to find where the hand is relative to the "cube"
             localHand.applyEuler(new THREE.Euler(-particles.rotation.x, -particles.rotation.y, -particles.rotation.z));
 
             const positionsArray = particles.geometry.attributes.position.array;
 
             for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const px = positionsArray[i * 3];
-                const py = positionsArray[i * 3 + 1];
-                const pz = positionsArray[i * 3 + 2];
+                const ix = i * 3; const iy = i * 3 + 1; const iz = i * 3 + 2;
+                const px = positionsArray[ix]; const py = positionsArray[iy]; const pz = positionsArray[iz];
+                const ox = originalPositions[ix]; const oy = originalPositions[iy]; const oz = originalPositions[iz];
 
-                const ox = originalPositions[i * 3];
-                const oy = originalPositions[i * 3 + 1];
-                const oz = originalPositions[i * 3 + 2];
-
-                // Calculate distance to hand
+                // Hand Repulsion
                 const dx = px - localHand.x;
                 const dy = py - localHand.y;
                 const dz = pz - localHand.z;
-                const distSq = dx * dx + dy * dy + dz * dz;
+                const distSq = dx*dx + dy*dy + dz*dz;
 
-                // Interaction Physics (Repulsion)
                 if (distSq < INTERACTION_RADIUS * INTERACTION_RADIUS) {
                     const dist = Math.sqrt(distSq);
                     const force = (INTERACTION_RADIUS - dist) / INTERACTION_RADIUS; 
-                    
-                    const angleX = dx / dist;
-                    const angleY = dy / dist;
-                    const angleZ = dz / dist;
-
-                    positionsArray[i * 3] += angleX * force * 2;
-                    positionsArray[i * 3 + 1] += angleY * force * 2;
-                    positionsArray[i * 3 + 2] += angleZ * force * 2;
+                    positionsArray[ix] += (dx/dist) * force * 3;
+                    positionsArray[iy] += (dy/dist) * force * 3;
+                    positionsArray[iz] += (dz/dist) * force * 3;
                 } else {
-                    // Return to original position (Spring force)
-                    positionsArray[i * 3] += (ox - px) * RETURN_SPEED;
-                    positionsArray[i * 3 + 1] += (oy - py) * RETURN_SPEED;
-                    positionsArray[i * 3 + 2] += (oz - pz) * RETURN_SPEED;
+                    // Return to target shape (spring force)
+                    positionsArray[ix] += (ox - px) * RETURN_SPEED;
+                    positionsArray[iy] += (oy - py) * RETURN_SPEED;
+                    positionsArray[iz] += (oz - pz) * RETURN_SPEED;
                 }
             }
-
             particles.geometry.attributes.position.needsUpdate = true;
         }
 
@@ -203,63 +270,36 @@
         }
 
 
-        // --- 4. MediaPipe Hands Setup ---
+        // --- 4. MediaPipe Hands Setup (Same as before) ---
         const videoElement = document.getElementById('input-video');
 
         function onResults(results) {
             document.getElementById('loading').style.display = 'none';
-
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                // Get the first hand detected
                 const landmarks = results.multiHandLandmarks[0];
-                
-                // Index Finger Tip is landmark #8
                 const indexFinger = landmarks[8];
-
-                // Map video coordinates (0 to 1) to Three.js World Coordinates
-                // Screen space is roughly -80 to 80 based on our camera Z position
-                const x = (0.5 - indexFinger.x) * 180; // Flip X because webcam is mirrored
-                const y = (0.5 - indexFinger.y) * 120; // Invert Y
-                
-                // Approximate Z depth using hand size or just fix it at 0
-                // Simple approach: Hand is generally in front of the object
-                const z = 20; 
-
-                // Smooth movement (Linear Interpolation)
-                handPosition.lerp(new THREE.Vector3(x, y, z), 0.1);
+                // Map video coordinates to bigger World coordinates
+                const x = (0.5 - indexFinger.x) * 250; 
+                const y = (0.5 - indexFinger.y) * 200; 
+                const z = 30; 
+                handPosition.lerp(new THREE.Vector3(x, y, z), 0.15);
             } else {
-                // If no hand, move "interaction point" far away
                 handPosition.lerp(new THREE.Vector3(9999, 9999, 9999), 0.05);
             }
         }
 
-        const hands = new Hands({locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-        }});
-
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
+        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        hands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
         hands.onResults(onResults);
 
         const cameraUtils = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({image: videoElement});
-            },
-            width: 640,
-            height: 480
+            onFrame: async () => { await hands.send({image: videoElement}); },
+            width: 640, height: 480
         });
-
         cameraUtils.start();
 
-        // Start Three.js
         initThree();
 
     </script>
 </body>
 </html>
-
