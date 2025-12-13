@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gesture Particles - Phoenix Edition</title>
+    <title>Particle Gestures - Shield Edition</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; }
         
-        /* Video Preview */
         #video-container {
             position: absolute;
             top: 20px; left: 20px;
@@ -21,7 +20,6 @@
         }
         video { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
 
-        /* HUD Overlay */
         #hud {
             position: absolute;
             top: 20px; right: 20px;
@@ -31,7 +29,9 @@
             pointer-events: none;
         }
         h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
-        #status { font-size: 18px; color: #ffaa00; margin-top: 5px; font-weight: bold; text-shadow: 0 0 10px rgba(255, 100, 0, 0.8); }
+        #status { font-size: 18px; color: #ffaa00; margin-top: 5px; font-weight: bold; }
+        #timer { font-size: 24px; color: #ff4444; font-weight: bold; margin-top: 5px; display: none;}
+        
         #instructions {
             margin-top: 15px;
             font-size: 14px;
@@ -42,8 +42,8 @@
             border-radius: 8px;
         }
         .key { color: #ffeb3b; font-weight: bold; }
-        .phoenix { color: #ff5500; font-weight: bold; }
-        .danger { color: #ff0000; font-weight: bold; text-transform: uppercase; }
+        .danger { color: #ff0000; font-weight: bold; }
+        .cool { color: #00e5ff; font-weight: bold; }
 
         #loading {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -53,24 +53,25 @@
 </head>
 <body>
 
-    <div id="loading">Summoning Particles...</div>
+    <div id="loading">Initializing Physics Engine...</div>
     
     <div id="video-container">
         <video id="input-video" playsinline></video>
     </div>
 
     <div id="hud">
-        <h1>Particle Shifter</h1>
+        <h1>Particle Master</h1>
         <div id="status">Waiting for hand...</div>
+        <div id="timer"></div>
         <div id="instructions">
-            <div><span class="key">🖐️ Open Hand</span> = Cube</div>
-            <div><span class="key">✊ Fist</span> = Heart</div>
-            <div><span class="phoenix">✌️ Peace</span> = PHOENIX</div>
+            <div><span class="cool">🖐️ Open Hand</span> = ENERGY SHIELD</div>
+            <div><span class="cool">✊ Fist</span> = TORNADO</div>
+            <div><span class="cool">👍 Thumb</span> = DNA HELIX</div>
+            <div><span class="key">✌️ Peace</span> = Phoenix</div>
             <div><span class="key">☝️ Point</span> = Saturn</div>
-            <div><span class="key">👍 Thumb</span> = Karate</div>
-            <div><span class="key">🖐️ (3 Fingers)</span> = Atom</div>
+            <div><span class="key">3 Fingers</span> = Atom</div>
             <div style="margin-top:5px; border-top:1px solid #555; padding-top:5px;">
-                <span class="danger">🤘 Rock</span> = BIG EXPLOSION
+                <span class="danger">🤘 Rock</span> = SUPER NOVA
             </div>
         </div>
     </div>
@@ -81,29 +82,34 @@
     <script type="module">
         import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
-        // --- Config ---
-        const PARTICLE_COUNT = 18000; // More particles for the detailed bird
+        // --- Configuration ---
+        const PARTICLE_COUNT = 20000; 
         const INTERACTION_RADIUS = 40;
-        const RETURN_SPEED = 0.05; // Slightly slower return for smoother morphing
+        const RETURN_SPEED = 0.08; 
         
         // --- Variables ---
         let scene, camera, renderer, particles;
         let positions, originalPositions, colors;
         let handPosition = new THREE.Vector3(9999, 9999, 9999); 
-        let currentShape = 'cube';
+        let currentShape = 'shield';
+        
+        // Explosion Logic
+        let explosionState = 'idle'; 
+        let explosionStartTime = 0;
+        
         const clock = new THREE.Clock();
         const colorObj = new THREE.Color();
         
         let gestureFrameCount = 0;
         let lastGesture = '';
 
-        // --- 1. Three.js Setup ---
+        // --- 1. Three.js Initialization ---
         function initThree() {
             scene = new THREE.Scene();
             scene.fog = new THREE.FogExp2(0x000000, 0.001);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-            camera.position.z = 140;
+            camera.position.z = 150;
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -111,7 +117,7 @@
             document.body.appendChild(renderer.domElement);
 
             createParticleSystem();
-            setupCube(); 
+            setupShield(); // Start with Shield
             
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
@@ -122,7 +128,6 @@
             animate();
         }
 
-        // --- 2. Particle System ---
         function createParticleSystem() {
             const geometry = new THREE.BufferGeometry();
             positions = new Float32Array(PARTICLE_COUNT * 3);
@@ -138,14 +143,15 @@
 
             const material = new THREE.PointsMaterial({
                 size: 0.8, vertexColors: true, blending: THREE.AdditiveBlending,
-                depthTest: false, transparent: true, opacity: 0.95
+                depthTest: false, transparent: true, opacity: 0.9
             });
 
             particles = new THREE.Points(geometry, material);
             scene.add(particles);
         }
 
-        function updateColors(hue, type = 'normal') {
+        // --- 2. Color Manager ---
+        function updateColors(type) {
              for (let i = 0; i < PARTICLE_COUNT; i++) {
                 const x = originalPositions[i * 3];
                 const y = originalPositions[i * 3 + 1];
@@ -153,21 +159,26 @@
                 const dist = Math.sqrt(x*x + y*y + z*z);
                 
                 if (type === 'explosion') {
-                    // Bright white center fading to yellow then red
-                    const intensity = Math.random();
-                    if(intensity > 0.9) colorObj.setRGB(1, 1, 1); 
-                    else colorObj.setHSL(0.0 + Math.random() * 0.15, 1.0, 0.5); 
+                     // White hot center
+                     colorObj.setHSL(0.1, 1.0, 0.5);
+                } else if (type === 'tornado') {
+                    // Dark Grey/Blue storm
+                    colorObj.setHSL(0.6, 0.5, 0.4 + (y+100)/300);
+                } else if (type === 'dna') {
+                    // Two strands: one Blue, one Pink
+                    if ((i % 2) === 0) colorObj.setHSL(0.55, 1.0, 0.5); 
+                    else colorObj.setHSL(0.9, 1.0, 0.5); 
+                } else if (type === 'shield') {
+                    // Cyan / Electric Blue
+                    colorObj.setHSL(0.5, 1.0, 0.6); 
                 } else if (type === 'phoenix') {
-                    // Fire colors: Yellow core, Red wings
                     const wingSpan = Math.abs(x);
                     colorObj.setHSL(0.05 + (0.15 - (wingSpan/1500)), 1.0, 0.5);
                 } else if (type === 'atom') {
                     if (dist < 20) colorObj.setHSL(0.02, 1.0, 0.5); 
                     else colorObj.setHSL(0.6, 1.0, 0.6); 
-                } else if (type === 'karate') {
-                    colorObj.setHSL(0.5 + (y/150), 0.9, 0.6); 
                 } else {
-                    colorObj.setHSL(hue + (dist/200), 0.8, 0.6);
+                    colorObj.setHSL(0.6 + (dist/200), 0.8, 0.6);
                 }
                 
                 colors[i * 3] = colorObj.r;
@@ -177,244 +188,249 @@
             particles.geometry.attributes.color.needsUpdate = true;
         }
 
-        // --- SHAPE GENERATORS ---
+        // --- 3. Shape Generators ---
         let pIndex = 0;
         function resetPIndex() { pIndex = 0; }
-        
-        function fillLimb(start, end, width, count) {
-            const vec = new THREE.Vector3().subVectors(end, start);
-            for (let k = 0; k < count; k++) {
-                if (pIndex >= PARTICLE_COUNT) return;
-                const t = Math.random();
-                const px = start.x + vec.x * t;
-                const py = start.y + vec.y * t;
-                const pz = start.z + vec.z * t;
-                originalPositions[pIndex*3] = px + (Math.random() - 0.5) * width;
-                originalPositions[pIndex*3+1] = py + (Math.random() - 0.5) * width;
-                originalPositions[pIndex*3+2] = pz + (Math.random() - 0.5) * width;
-                pIndex++;
+
+        // --- NEW: SHIELD GENERATOR ---
+        function setupShield() {
+            if (currentShape === 'shield') return;
+            currentShape = 'shield';
+            explosionState = 'idle';
+            document.getElementById('status').innerText = "Shape: ENERGY SHIELD";
+            document.getElementById('timer').style.display = 'none';
+            document.getElementById('status').style.color = "#00ffff";
+            
+            resetPIndex();
+            // A curved disc
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const radius = Math.sqrt(Math.random()) * 80; // Radius up to 80
+                const angle = Math.random() * Math.PI * 2;
+                
+                // x, y form the circle
+                originalPositions[i*3] = radius * Math.cos(angle);
+                originalPositions[i*3+1] = radius * Math.sin(angle);
+                
+                // z creates the curve (sphere cap formula)
+                // The closer to center, the more forward it pops out
+                originalPositions[i*3+2] = Math.sqrt(80*80 - radius*radius) * 0.4;
             }
+            updateColors('shield');
         }
 
-        // --- PHOENIX LOGIC ---
+        // --- TORNADO ---
+        function setupTornado() {
+            if (currentShape === 'tornado') return;
+            currentShape = 'tornado';
+            explosionState = 'idle';
+            document.getElementById('status').innerText = "Shape: TORNADO";
+            document.getElementById('timer').style.display = 'none';
+            document.getElementById('status').style.color = "#aaa";
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const height = (Math.random() - 0.5) * 200; 
+                const t = (height + 100) / 200; 
+                const radius = 10 + t * 60; 
+                const angle = Math.random() * Math.PI * 2;
+                
+                originalPositions[i*3] = radius * Math.cos(angle);
+                originalPositions[i*3+1] = height;
+                originalPositions[i*3+2] = radius * Math.sin(angle);
+            }
+            updateColors('tornado');
+        }
+
+        // --- DNA HELIX ---
+        function setupDNA() {
+            if (currentShape === 'dna') return;
+            currentShape = 'dna';
+            explosionState = 'idle';
+            document.getElementById('status').innerText = "Shape: DNA";
+            document.getElementById('timer').style.display = 'none';
+            document.getElementById('status').style.color = "#ff00ff";
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const t = Math.random() * 200 - 100;
+                const angle = t * 0.1;
+                const radius = 30;
+                const offset = (i % 2 === 0) ? 0 : Math.PI;
+                originalPositions[i*3] = radius * Math.cos(angle + offset);
+                originalPositions[i*3+1] = t;
+                originalPositions[i*3+2] = radius * Math.sin(angle + offset);
+                // Thickness
+                originalPositions[i*3] += (Math.random()-0.5)*5;
+                originalPositions[i*3+1] += (Math.random()-0.5)*5;
+                originalPositions[i*3+2] += (Math.random()-0.5)*5;
+            }
+            updateColors('dna');
+        }
+
+        // --- PHOENIX ---
         function setupPhoenix() {
             if (currentShape === 'phoenix') return;
             currentShape = 'phoenix';
-            document.getElementById('status').innerText = "Legendary PHOENIX";
+            explosionState = 'idle';
+            document.getElementById('status').innerText = "Shape: PHOENIX";
+            document.getElementById('timer').style.display = 'none';
             document.getElementById('status').style.color = "#ff5500";
-            
             resetPIndex();
-            
-            // 1. Body (Line from tail to head)
-            const tail = new THREE.Vector3(0, -30, 0);
-            const head = new THREE.Vector3(0, 30, 20);
-            fillLimb(tail, head, 15, 2000);
-
-            // 2. Wings (Parabolic curves)
-            const wingParticles = 6000; 
-            for(let i=0; i<wingParticles; i++) {
-                if (pIndex >= PARTICLE_COUNT) break;
-                // t goes from -1 (Left tip) to 1 (Right tip)
-                const t = (Math.random() - 0.5) * 2; 
-                const x = t * 110; 
-                // Arch formula for wings
-                const y = 30 - 30 * (t*t) + (Math.random()-0.5)*10; 
-                // Sweep back
-                const z = -20 * Math.abs(t) + (Math.random()-0.5)*10;
-                
+            // Body
+            for(let i=0; i<2000; i++) {
+                 originalPositions[pIndex*3] = (Math.random()-0.5)*10;
+                 originalPositions[pIndex*3+1] = (Math.random()-0.5)*60;
+                 originalPositions[pIndex*3+2] = (Math.random()-0.5)*10;
+                 pIndex++;
+            }
+            // Wings
+            while(pIndex < PARTICLE_COUNT) {
+                const t = (Math.random()-0.5)*2; 
+                const x = t * 120;
+                const y = 20 - 40 * (t*t);
                 originalPositions[pIndex*3] = x;
-                originalPositions[pIndex*3+1] = y;
-                originalPositions[pIndex*3+2] = z;
+                originalPositions[pIndex*3+1] = y + (Math.random()-0.5)*10;
+                originalPositions[pIndex*3+2] = -20*Math.abs(t) + (Math.random()-0.5)*10;
                 pIndex++;
             }
-
-            // 3. Tail Feathers (Fan out)
-            const tailParticles = 2000;
-            for(let i=0; i<tailParticles; i++) {
-                 if (pIndex >= PARTICLE_COUNT) break;
-                 const angle = (Math.random() - 0.5) * 2; // -1 to 1 rad approx
-                 const r = 30 + Math.random() * 40;
-                 
-                 originalPositions[pIndex*3] = Math.sin(angle) * r * 0.5;
-                 originalPositions[pIndex*3+1] = -30 - Math.cos(angle) * r; // Point down
-                 originalPositions[pIndex*3+2] = -10 + (Math.random()-0.5)*5;
-                 pIndex++;
-            }
-
-            // 4. Fill rest with Aura
-            while(pIndex < PARTICLE_COUNT) {
-                 const t = (Math.random() - 0.5) * 2;
-                 originalPositions[pIndex*3] = t * 120;
-                 originalPositions[pIndex*3+1] = (Math.random()-0.5) * 80;
-                 originalPositions[pIndex*3+2] = (Math.random()-0.5) * 40;
-                 pIndex++;
-            }
-            
-            updateColors(0, 'phoenix');
+            updateColors('phoenix');
         }
 
-        function setupExplosion() {
-            if (currentShape === 'explode') return;
-            currentShape = 'explode';
-            document.getElementById('status').innerText = "BIG BANG!";
-            document.getElementById('status').style.color = "#ff0000";
-            
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                // Massive range: 300 to 800
-                const r = 200 + Math.random() * 600;
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                
-                originalPositions[i*3] = r * Math.sin(phi) * Math.cos(theta);
-                originalPositions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-                originalPositions[i*3+2] = r * Math.cos(phi);
-            }
-            updateColors(0, 'explosion');
-        }
-
-        // --- Other Shapes ---
+        // --- ATOM ---
         function setupAtom() {
             if (currentShape === 'atom') return;
             currentShape = 'atom';
+            explosionState = 'idle';
             document.getElementById('status').innerText = "Shape: ATOM";
+            document.getElementById('timer').style.display = 'none';
             document.getElementById('status').style.color = "#00ffff";
             resetPIndex();
             // Nucleus
-            for (let i = 0; i < 4000; i++) {
-                const u=Math.random(), v=Math.random();
-                const r = 15 * Math.cbrt(Math.random());
-                const theta = 2*Math.PI*u, phi = Math.acos(2*v-1);
-                originalPositions[pIndex*3] = r*Math.sin(phi)*Math.cos(theta);
-                originalPositions[pIndex*3+1] = r*Math.sin(phi)*Math.sin(theta);
-                originalPositions[pIndex*3+2] = r*Math.cos(phi);
-                pIndex++;
-            }
-            // Electron Rings
-            const ringCount = Math.floor((PARTICLE_COUNT - 4000) / 3);
-            const createRing = (rotX, rotY) => {
-                for(let k=0; k<ringCount; k++) {
-                    if(pIndex>=PARTICLE_COUNT) break;
-                    const a = Math.random()*Math.PI*2;
-                    const r = 60 + (Math.random()-0.5)*5;
-                    let x = r*Math.cos(a), y=r*Math.sin(a), z=(Math.random()-0.5)*5;
-                    // Rotate
-                    if(rotX) { let t=y; y=t*Math.cos(rotX)-z*Math.sin(rotX); z=t*Math.sin(rotX)+z*Math.cos(rotX); }
-                    if(rotY) { let t=x; x=t*Math.cos(rotY)-z*Math.sin(rotY); z=t*Math.sin(rotY)+z*Math.cos(rotY); }
-                    originalPositions[pIndex*3]=x; originalPositions[pIndex*3+1]=y; originalPositions[pIndex*3+2]=z;
-                    pIndex++;
-                }
-            };
-            createRing(0,0); createRing(Math.PI/3, 0); createRing(-Math.PI/3, 0);
-            updateColors(0, 'atom');
-        }
-
-        function setupKarate() {
-             if (currentShape === 'karate') return;
-            currentShape = 'karate';
-            document.getElementById('status').innerText = "Shape: KARATE";
-            document.getElementById('status').style.color = "#00e5ff";
-            resetPIndex();
-            // Simple Karate Skeleton
-            fillLimb({x:0,y:40,z:0}, {x:0,y:0,z:0}, 18, 3000); // Body
-            fillLimb({x:0,y:45,z:0}, {x:0,y:55,z:0}, 15, 1000); // Head
-            fillLimb({x:0,y:0,z:0}, {x:40,y:30,z:10}, 12, 1500); // Kick Leg
-            fillLimb({x:0,y:0,z:0}, {x:-10,y:-50,z:0}, 12, 1500); // Plant Leg
-            fillLimb({x:0,y:35,z:0}, {x:30,y:40,z:10}, 10, 1000); // Arm
-            fillLimb({x:0,y:35,z:0}, {x:-30,y:30,z:-10}, 10, 1000); // Arm
-            while(pIndex<PARTICLE_COUNT) {
-                 originalPositions[pIndex*3] = (Math.random()-0.5)*100;
-                 originalPositions[pIndex*3+1] = (Math.random()-0.5)*100;
-                 originalPositions[pIndex*3+2] = (Math.random()-0.5)*100;
+            for(let i=0; i<5000; i++) {
+                 const r = 15*Math.cbrt(Math.random());
+                 const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
+                 originalPositions[pIndex*3] = r*Math.sin(ph)*Math.cos(th);
+                 originalPositions[pIndex*3+1] = r*Math.sin(ph)*Math.sin(th);
+                 originalPositions[pIndex*3+2] = r*Math.cos(ph);
                  pIndex++;
             }
-            updateColors(0, 'karate');
+            // Shells
+            while(pIndex < PARTICLE_COUNT) {
+                const r = 60 + (Math.random()-0.5)*10;
+                const a = Math.random()*Math.PI*2;
+                const orbit = Math.floor(Math.random()*3);
+                let x = r*Math.cos(a); let y = r*Math.sin(a); let z=0;
+                if(orbit===1) { let t=y; y=t*0.5; z=t*0.866; } 
+                if(orbit===2) { let t=y; y=t*0.5; z=-t*0.866; } 
+                originalPositions[pIndex*3]=x; originalPositions[pIndex*3+1]=y; originalPositions[pIndex*3+2]=z;
+                pIndex++;
+            }
+            updateColors('atom');
         }
         
-        function setupCube() {
-            if (currentShape === 'cube') return;
-            currentShape = 'cube';
-            document.getElementById('status').innerText = "Shape: CUBE";
-            document.getElementById('status').style.color = "#00ffcc";
-            const side = 90;
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                originalPositions[i*3] = (Math.random() - 0.5) * side;
-                originalPositions[i*3+1] = (Math.random() - 0.5) * side;
-                originalPositions[i*3+2] = (Math.random() - 0.5) * side;
-            }
-            updateColors(0.6); 
-        }
-
-        function setupHeart() {
-            if (currentShape === 'heart') return;
-            currentShape = 'heart';
-            document.getElementById('status').innerText = "Shape: HEART";
-            document.getElementById('status').style.color = "#ff0066";
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const t = Math.random() * Math.PI * 2;
-                let x = 16 * Math.pow(Math.sin(t), 3);
-                let y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                const scale = 3.5 * Math.sqrt(Math.random()); 
-                x *= scale; y *= scale;
-                originalPositions[i*3] = x;
-                originalPositions[i*3+1] = y + 20; 
-                originalPositions[i*3+2] = (Math.random() - 0.5) * 15;
-            }
-            updateColors(0.0); 
-        }
-        
+        // --- SATURN ---
         function setupSaturn() {
-            if (currentShape === 'saturn') return;
+             if (currentShape === 'saturn') return;
             currentShape = 'saturn';
+            explosionState = 'idle';
             document.getElementById('status').innerText = "Shape: SATURN";
+            document.getElementById('timer').style.display = 'none';
             document.getElementById('status').style.color = "#ffaa00";
-             const sphereCount = Math.floor(PARTICLE_COUNT * 0.5);
-             const planetRadius = 35;
-             for (let i = 0; i < sphereCount; i++) {
-                const u = Math.random(); const v = Math.random();
-                const theta = 2 * Math.PI * u; const phi = Math.acos(2 * v - 1);
-                originalPositions[i*3] = planetRadius * Math.sin(phi) * Math.cos(theta);
-                originalPositions[i*3+1] = planetRadius * Math.sin(phi) * Math.sin(theta);
-                originalPositions[i*3+2] = planetRadius * Math.cos(phi);
-             }
-             for (let i = sphereCount; i < PARTICLE_COUNT; i++) {
-                const ringRadius = 50 + Math.random() * 30;
-                const angle = Math.random() * Math.PI * 2;
-                originalPositions[i*3] = ringRadius * Math.cos(angle);
-                originalPositions[i*3+1] = (Math.random() - 0.5) * 2; 
-                originalPositions[i*3+2] = ringRadius * Math.sin(angle);
-             }
-             updateColors(0.1); 
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                 if(i < PARTICLE_COUNT*0.4) {
+                     const r = 35*Math.cbrt(Math.random());
+                     const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
+                     originalPositions[i*3] = r*Math.sin(ph)*Math.cos(th);
+                     originalPositions[i*3+1] = r*Math.sin(ph)*Math.sin(th);
+                     originalPositions[i*3+2] = r*Math.cos(ph);
+                 } else {
+                     const r = 50 + Math.random()*30;
+                     const a = Math.random()*Math.PI*2;
+                     originalPositions[i*3] = r*Math.cos(a);
+                     originalPositions[i*3+1] = (Math.random()-0.5)*2;
+                     originalPositions[i*3+2] = r*Math.sin(a);
+                 }
+            }
+            updateColors('saturn');
         }
 
-        // --- 4. Animation Loop ---
+        // --- 4. EXPLOSION LOGIC SEQUENCE ---
+        function triggerSuperNova() {
+            if (currentShape === 'nova') return;
+            currentShape = 'nova';
+            explosionState = 'imploding';
+            explosionStartTime = clock.getElapsedTime();
+            
+            document.getElementById('status').innerText = "SEQUENCE STARTED";
+            document.getElementById('status').style.color = "red";
+            document.getElementById('timer').style.display = 'block';
+            
+            updateColors('explosion');
+        }
+
+        function updateExplosionLogic(time) {
+            const elapsed = time - explosionStartTime;
+            const timerDiv = document.getElementById('timer');
+
+            // PHASE 1: IMPLOSION (0s - 2s)
+            if (explosionState === 'imploding') {
+                timerDiv.innerText = "IMPLODING...";
+                for(let i=0; i<PARTICLE_COUNT; i++) {
+                    originalPositions[i*3] *= 0.95; 
+                    originalPositions[i*3+1] *= 0.95;
+                    originalPositions[i*3+2] *= 0.95;
+                }
+                if (elapsed > 2) {
+                    explosionState = 'waiting';
+                }
+            }
+            // PHASE 2: WAIT (2s - 7s)
+            else if (explosionState === 'waiting') {
+                const timeLeft = Math.ceil(7 - elapsed);
+                timerDiv.innerText = `DETONATION IN: ${timeLeft}`;
+                for(let i=0; i<PARTICLE_COUNT; i++) {
+                     originalPositions[i*3] = (Math.random()-0.5) * 5;
+                     originalPositions[i*3+1] = (Math.random()-0.5) * 5;
+                     originalPositions[i*3+2] = (Math.random()-0.5) * 5;
+                }
+                if (elapsed > 7) {
+                    explosionState = 'exploding';
+                    for(let i=0; i<PARTICLE_COUNT; i++) {
+                        const r = 400 + Math.random()*400;
+                        const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
+                        originalPositions[i*3] = r*Math.sin(ph)*Math.cos(th);
+                        originalPositions[i*3+1] = r*Math.sin(ph)*Math.sin(th);
+                        originalPositions[i*3+2] = r*Math.cos(ph);
+                    }
+                }
+            }
+            // PHASE 3: BLAST
+            else if (explosionState === 'exploding') {
+                timerDiv.innerText = "BOOM!";
+            }
+        }
+
+        // --- 5. Animation Loop ---
         function animate() {
             requestAnimationFrame(animate);
             const time = clock.getElapsedTime();
 
-            if (currentShape === 'phoenix') {
-                // FLAPPING ANIMATION
-                // We access the live buffer to modify Y position based on X position
-                const pArray = particles.geometry.attributes.position.array;
-                const oArray = originalPositions;
-                
-                // Flap speed
-                const flap = Math.sin(time * 3) * 10; 
-                
-                // We don't modify originalPositions, we modify the physics loop target logic implicitly
-                // But for simple waving, let's rotate the whole system slightly to mimic hovering
-                particles.rotation.z = Math.sin(time) * 0.1;
-                particles.rotation.y = Math.sin(time * 0.5) * 0.2;
-                
+            if (currentShape === 'nova') {
+                updateExplosionLogic(time);
+                particles.rotation.y += 0.05;
+            } else if (currentShape === 'tornado') {
+                particles.rotation.y -= 0.15; 
+                particles.rotation.x = 0;
+            } else if (currentShape === 'dna') {
+                particles.rotation.y = time * 0.5;
             } else if (currentShape === 'atom') {
                 particles.rotation.y = time * 0.5;
-                particles.rotation.x = Math.sin(time * 0.3) * 0.2;
-                particles.rotation.z = Math.cos(time * 0.2) * 0.2;
-            } else if (currentShape === 'explode') {
-                 // CHAOS ROTATION
-                 particles.rotation.y += 0.02;
-                 particles.rotation.z += 0.01;
-            } else {
+                particles.rotation.z = Math.sin(time*0.5)*0.2;
+            } else if (currentShape === 'shield') {
+                // Shield holds steady, maybe subtle breath
+                particles.rotation.y = 0;
                 particles.rotation.z = 0;
+            } else if (currentShape === 'phoenix') {
+                particles.rotation.y = Math.sin(time*0.5)*0.2;
+            } else {
                 particles.rotation.y = time * 0.1;
             }
             
@@ -432,13 +448,8 @@
                 let px = pArray[ix]; let py = pArray[iy]; let pz = pArray[iz];
                 let ox = originalPositions[ix]; let oy = originalPositions[iy]; let oz = originalPositions[iz];
 
-                // Dynamic Phoenix Flapping (Calculate offset)
-                if (currentShape === 'phoenix') {
-                    // If particle is part of the wing (abs(x) > 10), move y up and down
-                    if (Math.abs(ox) > 15) {
-                        const flap = Math.sin(time * 3) * (Math.abs(ox) / 100); 
-                        oy += flap * 20; // Amplitude
-                    }
+                if (currentShape === 'phoenix' && Math.abs(ox) > 15) {
+                    oy += Math.sin(time * 3) * (Math.abs(ox) / 100) * 20;
                 }
 
                 // Physics
@@ -454,48 +465,47 @@
                     pArray[iy] += (dy/dist) * force * 5;
                     pArray[iz] += (dz/dist) * force * 5;
                 } else {
-                    pArray[ix] += (ox - px) * RETURN_SPEED;
-                    pArray[iy] += (oy - py) * RETURN_SPEED;
-                    pArray[iz] += (oz - pz) * RETURN_SPEED;
+                    const speed = (currentShape === 'nova' && explosionState === 'exploding') ? 0.2 : RETURN_SPEED;
+                    pArray[ix] += (ox - px) * speed;
+                    pArray[iy] += (oy - py) * speed;
+                    pArray[iz] += (oz - pz) * speed;
                 }
             }
             particles.geometry.attributes.position.needsUpdate = true;
         }
 
-        // --- 5. MediaPipe Gesture Logic ---
+        // --- 6. MediaPipe Gesture Logic ---
         function countFingers(lm) {
             let count = 0;
-            if (lm[8].y < lm[6].y) count++; // Index
-            if (lm[12].y < lm[10].y) count++; // Middle
-            if (lm[16].y < lm[14].y) count++; // Ring
-            if (lm[20].y < lm[18].y) count++; // Pinky
+            if (lm[8].y < lm[6].y) count++; 
+            if (lm[12].y < lm[10].y) count++; 
+            if (lm[16].y < lm[14].y) count++; 
+            if (lm[20].y < lm[18].y) count++; 
             return count;
         }
 
         function detectGesture(lm) {
             const fingers = countFingers(lm);
             
-            // Rock/Metal -> BIG EXPLOSION
+            // Rock/Metal -> SUPER NOVA
             if (fingers === 2 && lm[8].y < lm[6].y && lm[20].y < lm[18].y) return 'explode';
             
-            // Peace Sign -> PHOENIX (Replaces Circle)
-            if (fingers === 2 && lm[8].y < lm[6].y && lm[12].y < lm[10].y) return 'phoenix';
+            // Fist -> TORNADO
+            if (fingers === 0 && (lm[4].y > lm[3].y)) return 'fist'; 
             
-            // Three Fingers -> ATOM
-            if (fingers === 3 && lm[8].y < lm[6].y && lm[12].y < lm[10].y && lm[16].y < lm[14].y && lm[20].y > lm[18].y) {
-                return 'atom';
-            }
+            // Thumbs Up -> DNA 
+            if (fingers === 0 && lm[4].y < lm[3].y) return 'thumb';
 
-            // Thumbs Up
-            if (fingers === 0 && lm[4].y < lm[3].y && lm[4].y < lm[2].y) return 'karate';
+            // Peace -> Phoenix
+            if (fingers === 2 && lm[8].y < lm[6].y && lm[12].y < lm[10].y) return 'peace';
             
-            // Fist -> Heart
-            if (fingers === 0) return 'fist'; 
-
+            // 3 Fingers -> Atom
+            if (fingers === 3 && lm[20].y > lm[18].y) return 'atom';
+            
             // One Finger -> Saturn
-            if (fingers === 1 && lm[8].y < lm[6].y) return 'point'; 
+            if (fingers === 1) return 'point';
             
-            // Open Hand -> Cube
+            // Open Hand -> SHIELD (Replaces Text)
             if (fingers >= 4) return 'open'; 
 
             return 'unknown';
@@ -521,14 +531,14 @@
                     lastGesture = gesture;
                 }
 
-                if (gestureFrameCount > 10) {
-                    if (gesture === 'open') setupCube();
-                    else if (gesture === 'fist') setupHeart();
-                    else if (gesture === 'phoenix') setupPhoenix();
+                if (gestureFrameCount > 12) {
+                    if (gesture === 'open') setupShield();
+                    else if (gesture === 'fist') setupTornado();
+                    else if (gesture === 'thumb') setupDNA();
+                    else if (gesture === 'peace') setupPhoenix();
                     else if (gesture === 'point') setupSaturn();
-                    else if (gesture === 'karate') setupKarate();
                     else if (gesture === 'atom') setupAtom();
-                    else if (gesture === 'explode') setupExplosion();
+                    else if (gesture === 'explode') triggerSuperNova();
                 }
             } else {
                 handPosition.lerp(new THREE.Vector3(9999, 9999, 9999), 0.1);
@@ -551,4 +561,3 @@
     </script>
 </body>
 </html>
-
