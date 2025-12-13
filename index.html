@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Particle Gestures - Cosmic Edition</title>
+    <title>Particle Gestures - Ultimate</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; }
@@ -64,8 +64,8 @@
         <h1>Particle Master</h1>
         <div id="status">Waiting for hand...</div>
         <div id="instructions">
+            <div><span class="cosmic">👆 L-Shape</span> = GALAXY (Fixed)</div>
             <div><span class="cosmic">👌 OK Sign</span> = BLACK HOLE</div>
-            <div><span class="cosmic">🤟 Spidey</span> = GALAXY</div>
             <div><span class="cool">🖐️ Open</span> = SHIELD</div>
             <div><span class="cool">🤙 Shaka</span> = TORNADO</div>
             <div><span class="sacred">👍 Thumb</span> = MERKABA</div>
@@ -169,17 +169,11 @@
                 } else if (type === 'shield') {
                     colorObj.setHSL(0.5, 1.0, 0.6); 
                 } else if (type === 'blackhole') {
-                    // Inner ring: Bright Orange/White (Accretion)
-                    // Outer ring: Dark Purple
                     if (dist < 50) colorObj.setHSL(0.08, 1.0, 0.6); 
                     else colorObj.setHSL(0.75, 0.8, 0.3);
                 } else if (type === 'galaxy') {
-                    // Center: White/Yellow. Arms: Pink/Blue/Purple
                     if(dist < 20) colorObj.setHSL(0.15, 1.0, 0.7);
-                    else {
-                        // Color variation based on angle to make arms distinct
-                        colorObj.setHSL(0.6 + Math.random()*0.3, 0.8, 0.6);
-                    }
+                    else colorObj.setHSL(0.6 + Math.random()*0.3, 0.8, 0.6);
                 } else if (type === 'phoenix') {
                     const wingSpan = Math.abs(x);
                     colorObj.setHSL(0.05 + (0.15 - (wingSpan/1500)), 1.0, 0.5);
@@ -213,7 +207,7 @@
             }
         }
 
-        // --- NEW: BLACK HOLE ---
+        // --- BLACK HOLE ---
         function setupBlackHole() {
             if (currentShape === 'blackhole') return;
             currentShape = 'blackhole';
@@ -223,20 +217,16 @@
             resetPIndex();
 
             for (let i = 0; i < PARTICLE_COUNT; i++) {
-                // Accretion Disk
-                // No particles in the center (The Hole)
                 const r = 35 + Math.random() * 120; 
                 const angle = Math.random() * Math.PI * 2;
-                
                 originalPositions[i*3] = r * Math.cos(angle);
-                // Flattened but slightly thick
                 originalPositions[i*3+1] = (Math.random()-0.5) * (150/r) * 5; 
                 originalPositions[i*3+2] = r * Math.sin(angle);
             }
             updateColors('blackhole');
         }
 
-        // --- NEW: GALAXY ---
+        // --- GALAXY ---
         function setupGalaxy() {
             if (currentShape === 'galaxy') return;
             currentShape = 'galaxy';
@@ -246,22 +236,15 @@
             resetPIndex();
             
             const arms = 4;
-            const armWidth = 0.5; // Radians spread
+            const armWidth = 0.5; 
 
             for (let i = 0; i < PARTICLE_COUNT; i++) {
-                // Logarithmic spiral distribution
-                // Select an arm
                 const armIndex = i % arms;
-                const r = Math.random() * 140; // Size
-                
-                // Angle increases with radius (Spiral)
+                const r = Math.random() * 140; 
                 const baseAngle = (r / 25) + (armIndex * (Math.PI * 2 / arms));
-                
-                // Add randomness to width of arm
                 const angle = baseAngle + (Math.random()-0.5) * armWidth;
                 
                 originalPositions[i*3] = r * Math.cos(angle);
-                // Thicker in middle, thinner at edges
                 originalPositions[i*3+1] = (Math.random()-0.5) * ((140-r)/140) * 40; 
                 originalPositions[i*3+2] = r * Math.sin(angle);
             }
@@ -282,7 +265,6 @@
             const t1_b1 = new THREE.Vector3(s*0.8, -s*0.3, s*0.5);
             const t1_b2 = new THREE.Vector3(-s*0.8, -s*0.3, s*0.5);
             const t1_b3 = new THREE.Vector3(0, -s*0.3, -s);
-
             const t2_bot = new THREE.Vector3(0, -s, 0);
             const t2_b1 = new THREE.Vector3(s*0.8, s*0.3, s*0.5);
             const t2_b2 = new THREE.Vector3(-s*0.8, s*0.3, s*0.5);
@@ -475,13 +457,11 @@
                 particles.rotation.y = time * 0.4;
                 particles.rotation.z = time * 0.2;
             } else if (currentShape === 'blackhole') {
-                // Intense spin
                 particles.rotation.y -= 0.05;
-                particles.rotation.x = 0.5; // Tilted view
+                particles.rotation.x = 0.5; 
             } else if (currentShape === 'galaxy') {
-                // Majestic slow spin
                 particles.rotation.y = time * 0.1;
-                particles.rotation.x = 0.3; // Tilted
+                particles.rotation.x = 0.3; 
             } else if (currentShape === 'atom') {
                 particles.rotation.y = time * 0.5;
                 particles.rotation.z = Math.sin(time*0.5)*0.2;
@@ -512,11 +492,10 @@
                     oy += Math.sin(time * 3) * (Math.abs(ox) / 100) * 20;
                 }
 
-                // Black Hole Physics: Particles near center spin faster
                 if (currentShape === 'blackhole') {
                     const dist = Math.sqrt(ox*ox + oz*oz);
                     if (dist < 80) {
-                        const angle = time * (100/dist); // Faster if closer
+                        const angle = time * (100/dist); 
                         const r = dist;
                         const initialAngle = Math.atan2(oz, ox);
                         ox = r * Math.cos(initialAngle + angle);
@@ -562,22 +541,24 @@
         function detectGesture(lm) {
             const fingers = countFingers(lm);
             
-            // Rock/Metal -> SUPER NOVA
+            // Rock/Metal -> SUPER NOVA (Index + Pinky UP)
             if (fingers === 2 && lm[8].y < lm[6].y && lm[20].y < lm[18].y) return 'explode';
             
             // OK Sign -> BLACK HOLE
-            // Thumb tip and Index tip are close
             const thumbIndexDist = calculateDistance(lm[4], lm[8]);
             if (thumbIndexDist < 0.05 && lm[12].y < lm[10].y && lm[16].y < lm[14].y) {
                 return 'ok';
             }
 
-            // Spider-Man -> GALAXY
-            // Thumb, Index, Pinky Open. Middle, Ring Closed.
-            if (fingers === 3 && lm[8].y < lm[6].y && lm[20].y < lm[18].y && lm[12].y > lm[10].y && lm[16].y > lm[14].y) {
-                // Check thumb is out
-                 if (lm[4].x < lm[3].x) return 'spidey'; // Right hand logic approx
-                 return 'spidey';
+            // L-Shape -> GALAXY (Index Up, Thumb Out)
+            // fingers must be 1 (Index only)
+            // Thumb Tip X must be far from Index MCP X (Thumb is sticking out)
+            // Note: Direction depends on hand (Left vs Right), but generally distance check works
+            if (fingers === 1) {
+                const thumbOutDist = calculateDistance(lm[4], lm[2]); // Tip to MCP
+                // If Thumb tip is far from palm/index base, it is extended
+                if (thumbOutDist > 0.1) return 'l_shape'; 
+                else return 'point'; // Saturn (Thumb tucked)
             }
 
             // SHAKA -> TORNADO
@@ -591,9 +572,6 @@
             
             // 3 Fingers -> Atom
             if (fingers === 3 && lm[20].y > lm[18].y) return 'atom';
-            
-            // One Finger -> Saturn
-            if (fingers === 1) return 'point';
             
             // Open Hand -> SHIELD
             if (fingers >= 4) return 'open'; 
@@ -629,7 +607,7 @@
                     else if (gesture === 'point') setupSaturn();
                     else if (gesture === 'atom') setupAtom();
                     else if (gesture === 'ok') setupBlackHole();
-                    else if (gesture === 'spidey') setupGalaxy();
+                    else if (gesture === 'l_shape') setupGalaxy();
                     else if (gesture === 'explode') triggerSuperNova();
                 }
             } else {
@@ -653,3 +631,4 @@
     </script>
 </body>
 </html>
+
