@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Particle Gestures - Zero Conflict</title>
+    <title>Particle Gestures - Robust</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; }
@@ -34,9 +34,9 @@
         #instructions {
             margin-top: 15px;
             font-size: 14px;
-            color: rgba(255,255,255,0.8);
+            color: rgba(255,255,255,0.9);
             line-height: 1.6;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             padding: 15px;
             border-radius: 8px;
             display: grid;
@@ -67,14 +67,14 @@
         <h1>Particle Master</h1>
         <div id="status">Waiting for hand...</div>
         <div id="instructions">
-            <div><span class="cool">🖐️ Open</span><br>SHIELD</div>
-            <div><span class="danger">✊ Fist</span><br>BLACK HOLE</div>
+            <div><span class="cool">🤟 Spidey</span><br>ATOM (New)</div>
+            <div><span class="key">✋ 4-Fingers</span><br>PHOENIX (New)</div>
+            <div><span class="cosmic">👆 L-Sign</span><br>GALAXY</div>
+            <div><span class="danger">👌 OK Sign</span><br>BLACK HOLE</div>
             <div><span class="cool">🤙 Shaka</span><br>TORNADO</div>
             <div><span class="sacred">👍 Thumb</span><br>MERKABA</div>
-            <div><span class="key">✌️ Peace</span><br>PHOENIX</div>
+            <div><span class="cool">🖐️ Open (5)</span><br>SHIELD</div>
             <div><span class="key">☝️ Point</span><br>SATURN</div>
-            <div><span class="key">3 Finger</span><br>ATOM</div>
-            <div><span class="cosmic">👆 L-Sign</span><br>GALAXY</div>
             <div style="grid-column: span 2; border-top: 1px solid #555; padding-top:5px; text-align:center;">
                 <span class="danger">🤘 Rock</span> = NOVA BLAST
             </div>
@@ -182,8 +182,9 @@
                     const wingSpan = Math.abs(x);
                     colorObj.setHSL(0.05 + (0.15 - (wingSpan/1500)), 1.0, 0.5);
                 } else if (type === 'atom') {
-                    if (dist < 20) colorObj.setHSL(0.02, 1.0, 0.5); 
-                    else colorObj.setHSL(0.6, 1.0, 0.6); 
+                    // Atom: Blue electrons, Orange nucleus
+                    if (dist < 20) colorObj.setHSL(0.05, 1.0, 0.5); 
+                    else colorObj.setHSL(0.55, 1.0, 0.6); 
                 } else {
                     colorObj.setHSL(0.6 + (dist/200), 0.8, 0.6);
                 }
@@ -356,6 +357,7 @@
             document.getElementById('status').innerText = "ATOM";
             document.getElementById('status').style.color = "#00ffff";
             resetPIndex();
+            // Nucleus
             for(let i=0; i<5000; i++) {
                  const r = 15*Math.cbrt(Math.random());
                  const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
@@ -364,6 +366,7 @@
                  originalPositions[pIndex*3+2] = r*Math.cos(ph);
                  pIndex++;
             }
+            // Electron Orbits
             while(pIndex < PARTICLE_COUNT) {
                 const r = 60 + (Math.random()-0.5)*10;
                 const a = Math.random()*Math.PI*2;
@@ -517,69 +520,46 @@
             particles.geometry.attributes.position.needsUpdate = true;
         }
 
-        // --- 6. MediaPipe Gesture Logic ---
+        // --- 6. MediaPipe Gesture Logic (FINGER SIGNATURES) ---
         
-        // Helper: Check if a finger is extended (Tip above PIP joint)
         function isFingerUp(landmarks, fingerIndex) {
             const tip = landmarks[fingerIndex * 4 + 4];
             const pip = landmarks[fingerIndex * 4 + 2];
-            return tip.y < pip.y; // Y is inverted in MediaPipe usually, but we check relative
+            return tip.y < pip.y; // Standard Up check
         }
 
-        // Helper: Check if thumb is extended (Tip far from MCP x-wise or y-wise depending on hand)
         function isThumbUp(landmarks) {
             const tip = landmarks[4];
             const ip = landmarks[3];
             const mcp = landmarks[2];
-            // Simple check: Tip is "higher" than IP (screen coordinates)
-            // Note: This works best for upright hand. 
-            // Better check: Distance from Index MCP
             const indexMcp = landmarks[5];
             const dist = Math.sqrt(Math.pow(tip.x - indexMcp.x, 2) + Math.pow(tip.y - indexMcp.y, 2));
-            return dist > 0.08; // Threshold for "extended"
+            return dist > 0.08; 
         }
 
         function detectGesture(lm) {
-            // 1. Determine state of each finger (0=Folded, 1=Extended)
             const thumb = isThumbUp(lm) ? 1 : 0;
             const index = isFingerUp(lm, 1) ? 1 : 0;
             const middle = isFingerUp(lm, 2) ? 1 : 0;
             const ring = isFingerUp(lm, 3) ? 1 : 0;
             const pinky = isFingerUp(lm, 4) ? 1 : 0;
 
-            // 2. Create Signature
             const sig = `${thumb}${index}${middle}${ring}${pinky}`;
 
-            // 3. Match Signature to Gesture
-            // Note: Allowing slight variations for difficult gestures
+            // SIGNATURE MAP
+            if (sig === '00000') return 'blackhole'; // Fist
+            if (sig === '01000') return 'point'; // One Finger
+            if (sig === '10000') return 'thumb'; // Thumb Only
             
-            // FIST (00000) -> BLACK HOLE
-            if (sig === '00000') return 'blackhole';
+            if (sig === '11001') return 'atom'; // SPIDER-MAN (New Atom)
             
-            // POINT (01000) -> SATURN
-            if (sig === '01000') return 'point';
-            
-            // THUMB (10000) -> MERKABA
-            if (sig === '10000') return 'thumb';
+            if (sig === '01111') return 'phoenix'; // 4 FINGERS (New Phoenix)
 
-            // PEACE (01100) -> PHOENIX
-            if (sig === '01100') return 'peace';
+            if (sig === '11000') return 'l_shape'; // L-Sign
+            if (sig === '01001') return 'explode'; // Rock
+            if (sig === '10001') return 'shaka'; // Shaka
             
-            // L-SIGN (11000) -> GALAXY
-            if (sig === '11000') return 'l_shape';
-            
-            // ROCK (01001) -> EXPLOSION
-            if (sig === '01001') return 'explode';
-            
-            // SHAKA (10001) -> TORNADO
-            if (sig === '10001') return 'shaka';
-            
-            // 3-FINGERS (01110) -> ATOM
-            if (sig === '01110') return 'atom';
-            
-            // OPEN (11111) -> SHIELD
-            // Also accept 01111 (thumb tucked)
-            if (sig === '11111' || sig === '01111') return 'open';
+            if (sig === '11111' || sig === '01111') return 'open'; // Open
 
             return 'unknown';
         }
@@ -608,9 +588,9 @@
                     if (gesture === 'open') setupShield();
                     else if (gesture === 'shaka') setupTornado(); 
                     else if (gesture === 'thumb') setupMerkaba();
-                    else if (gesture === 'peace') setupPhoenix();
                     else if (gesture === 'point') setupSaturn();
                     else if (gesture === 'atom') setupAtom();
+                    else if (gesture === 'phoenix') setupPhoenix();
                     else if (gesture === 'blackhole') setupBlackHole();
                     else if (gesture === 'l_shape') setupGalaxy();
                     else if (gesture === 'explode') triggerSuperNova();
@@ -636,3 +616,4 @@
     </script>
 </body>
 </html>
+
