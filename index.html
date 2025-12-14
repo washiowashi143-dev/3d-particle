@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Particle Gestures - Robust</title>
+    <title>Particle Gestures - Free Fire Edition</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; }
@@ -47,7 +47,7 @@
         .danger { color: #ff0000; font-weight: bold; }
         .cool { color: #00e5ff; font-weight: bold; }
         .sacred { color: #d400ff; font-weight: bold; }
-        .cosmic { color: #ff00ff; font-weight: bold; }
+        .ff-gold { color: #ffd700; font-weight: bold; text-shadow: 0 0 5px #ff4500; }
 
         #loading {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -67,13 +67,14 @@
         <h1>Particle Master</h1>
         <div id="status">Waiting for hand...</div>
         <div id="instructions">
-            <div><span class="cool">🤟 Spidey</span><br>ATOM (New)</div>
-            <div><span class="key">✋ 4-Fingers</span><br>PHOENIX (New)</div>
-            <div><span class="cosmic">👆 L-Sign</span><br>GALAXY</div>
+            <div><span class="ff-gold">✌️ Victory</span><br>FREE FIRE LOGO</div>
+            <div><span class="cool">🤟 Spidey</span><br>ATOM</div>
+            <div><span class="key">✋ 4-Fingers</span><br>PHOENIX</div>
+            <div><span class="cosmic" style="color:#ff00ff">👆 L-Sign</span><br>GALAXY</div>
             <div><span class="danger">👌 OK Sign</span><br>BLACK HOLE</div>
             <div><span class="cool">🤙 Shaka</span><br>TORNADO</div>
             <div><span class="sacred">👍 Thumb</span><br>MERKABA</div>
-            <div><span class="cool">🖐️ Open (5)</span><br>SHIELD</div>
+            <div><span class="cool">🖐️ Open</span><br>SHIELD</div>
             <div><span class="key">☝️ Point</span><br>SATURN</div>
             <div style="grid-column: span 2; border-top: 1px solid #555; padding-top:5px; text-align:center;">
                 <span class="danger">🤘 Rock</span> = NOVA BLAST
@@ -88,7 +89,7 @@
         import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
         // --- Configuration ---
-        const PARTICLE_COUNT = 22000; 
+        const PARTICLE_COUNT = 24000; 
         const INTERACTION_RADIUS = 40;
         const RETURN_SPEED = 0.08; 
         
@@ -182,9 +183,12 @@
                     const wingSpan = Math.abs(x);
                     colorObj.setHSL(0.05 + (0.15 - (wingSpan/1500)), 1.0, 0.5);
                 } else if (type === 'atom') {
-                    // Atom: Blue electrons, Orange nucleus
-                    if (dist < 20) colorObj.setHSL(0.05, 1.0, 0.5); 
+                    if (dist < 20) colorObj.setHSL(0.02, 1.0, 0.5); 
                     else colorObj.setHSL(0.55, 1.0, 0.6); 
+                } else if (type === 'freefire') {
+                    // Gold blade, Red/Orange wings
+                    if (Math.abs(x) < 15) colorObj.setHSL(0.1, 1.0, 0.6); // Blade (Gold/Yellow)
+                    else colorObj.setHSL(0.05, 1.0, 0.5); // Wings (Red/Orange)
                 } else {
                     colorObj.setHSL(0.6 + (dist/200), 0.8, 0.6);
                 }
@@ -210,6 +214,62 @@
                 originalPositions[pIndex*3+2] = start.z + vec.z*t + (Math.random()-0.5)*2;
                 pIndex++;
             }
+        }
+
+        // --- SHAPE: FREE FIRE LOGO (Knife + Wings) ---
+        function setupFreeFire() {
+            if (currentShape === 'freefire') return;
+            currentShape = 'freefire';
+            explosionState = 'idle';
+            document.getElementById('status').innerText = "BOOYAH! (FREE FIRE)";
+            document.getElementById('status').style.color = "#ffd700";
+            resetPIndex();
+            
+            // 1. Central Blade (Wider top, sharp bottom)
+            const bladeParticles = 6000;
+            for(let i=0; i<bladeParticles; i++) {
+                // T goes from 1 (Top) to 0 (Tip)
+                const t = Math.random(); 
+                const y = t * 100 - 50; // -50 to 50
+                const width = t * 15; // Pointy at bottom, wide at top
+                originalPositions[pIndex*3] = (Math.random()-0.5) * width;
+                originalPositions[pIndex*3+1] = y;
+                originalPositions[pIndex*3+2] = (Math.random()-0.5) * 5;
+                pIndex++;
+            }
+
+            // 2. Wings (Curved)
+            const wingParticles = 8000;
+            for(let i=0; i<wingParticles; i++) {
+                if(pIndex >= PARTICLE_COUNT) break;
+                // t = -1 (Left) to 1 (Right), excluding center
+                let t = (Math.random() - 0.5) * 2;
+                if(Math.abs(t) < 0.2) continue; // Skip center (blade is there)
+                
+                const x = t * 100;
+                // Wing curve formula
+                const y = 30 - 30 * (t*t) + (Math.random()-0.5)*10;
+                
+                originalPositions[pIndex*3] = x;
+                originalPositions[pIndex*3+1] = y;
+                originalPositions[pIndex*3+2] = (Math.random()-0.5) * 5;
+                pIndex++;
+            }
+
+            // 3. Handle/Guard
+            const guardParticles = 2000;
+            fillLine(new THREE.Vector3(-20, 30, 0), new THREE.Vector3(20, 30, 0), guardParticles);
+
+            // Fill rest
+            while(pIndex < PARTICLE_COUNT) {
+                const r = 80 * Math.sqrt(Math.random());
+                const th = Math.random()*Math.PI*2;
+                originalPositions[pIndex*3] = r * Math.cos(th);
+                originalPositions[pIndex*3+1] = r * Math.sin(th);
+                originalPositions[pIndex*3+2] = (Math.random()-0.5)*20;
+                pIndex++;
+            }
+            updateColors('freefire');
         }
 
         // --- SHAPE: BLACK HOLE ---
@@ -466,6 +526,8 @@
                 particles.rotation.z = 0;
             } else if (currentShape === 'phoenix') {
                 particles.rotation.y = Math.sin(time*0.5)*0.2;
+            } else if (currentShape === 'freefire') {
+                 particles.rotation.y = Math.sin(time) * 0.3; // Gentle wobble
             } else {
                 particles.rotation.y = time * 0.1;
             }
@@ -525,13 +587,11 @@
         function isFingerUp(landmarks, fingerIndex) {
             const tip = landmarks[fingerIndex * 4 + 4];
             const pip = landmarks[fingerIndex * 4 + 2];
-            return tip.y < pip.y; // Standard Up check
+            return tip.y < pip.y; 
         }
 
         function isThumbUp(landmarks) {
             const tip = landmarks[4];
-            const ip = landmarks[3];
-            const mcp = landmarks[2];
             const indexMcp = landmarks[5];
             const dist = Math.sqrt(Math.pow(tip.x - indexMcp.x, 2) + Math.pow(tip.y - indexMcp.y, 2));
             return dist > 0.08; 
@@ -551,15 +611,16 @@
             if (sig === '01000') return 'point'; // One Finger
             if (sig === '10000') return 'thumb'; // Thumb Only
             
-            if (sig === '11001') return 'atom'; // SPIDER-MAN (New Atom)
+            if (sig === '11001') return 'atom'; // SPIDER-MAN
             
-            if (sig === '01111') return 'phoenix'; // 4 FINGERS (New Phoenix)
+            if (sig === '01111') return 'phoenix'; // 4 FINGERS
+            if (sig === '01100') return 'freefire'; // PEACE SIGN
 
             if (sig === '11000') return 'l_shape'; // L-Sign
             if (sig === '01001') return 'explode'; // Rock
             if (sig === '10001') return 'shaka'; // Shaka
             
-            if (sig === '11111' || sig === '01111') return 'open'; // Open
+            if (sig === '11111' || sig === '11110') return 'open'; // Open
 
             return 'unknown';
         }
@@ -594,6 +655,7 @@
                     else if (gesture === 'blackhole') setupBlackHole();
                     else if (gesture === 'l_shape') setupGalaxy();
                     else if (gesture === 'explode') triggerSuperNova();
+                    else if (gesture === 'freefire') setupFreeFire();
                 }
             } else {
                 handPosition.lerp(new THREE.Vector3(9999, 9999, 9999), 0.1);
