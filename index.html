@@ -1,681 +1,150 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Particle Gestures - Free Fire Edition</title>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
-        canvas { display: block; }
-        
-        #video-container {
-            position: absolute;
-            top: 20px; left: 20px;
-            width: 180px; height: 135px;
-            z-index: 10;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-        }
-        video { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
+  <meta charset="utf-8">
+  <title>Dr. Strange Web Hand Tracking</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 
-        #hud {
-            position: absolute;
-            top: 20px; right: 20px;
-            text-align: right;
-            color: white;
-            z-index: 10;
-            pointer-events: none;
-        }
-        h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
-        #status { font-size: 24px; color: #ffffff; margin-top: 5px; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-        
-        #instructions {
-            margin-top: 15px;
-            font-size: 14px;
-            color: rgba(255,255,255,0.9);
-            line-height: 1.6;
-            background: rgba(0,0,0,0.8);
-            padding: 15px;
-            border-radius: 8px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        .key { color: #ffeb3b; font-weight: bold; }
-        .danger { color: #ff0000; font-weight: bold; }
-        .cool { color: #00e5ff; font-weight: bold; }
-        .sacred { color: #d400ff; font-weight: bold; }
-        .ff-gold { color: #ffd700; font-weight: bold; text-shadow: 0 0 5px #ff4500; }
-
-        #loading {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: white; font-size: 24px;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="loading">Initializing Physics Engine...</div>
+  <style>
+    body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+    #video_input { display: none; }
     
-    <div id="video-container">
-        <video id="input-video" playsinline></video>
-    </div>
+    /* The Canvas where the video and hand lines are drawn */
+    #output_canvas {
+      transform: scaleX(-1); /* Mirror effect */
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+    }
 
-    <div id="hud">
-        <h1>Particle Master</h1>
-        <div id="status">Waiting for hand...</div>
-        <div id="instructions">
-            <div><span class="ff-gold">✌️ Victory</span><br>FREE FIRE LOGO</div>
-            <div><span class="cool">🤟 Spidey</span><br>ATOM</div>
-            <div><span class="key">✋ 4-Fingers</span><br>PHOENIX</div>
-            <div><span class="cosmic" style="color:#ff00ff">👆 L-Sign</span><br>GALAXY</div>
-            <div><span class="danger">👌 OK Sign</span><br>BLACK HOLE</div>
-            <div><span class="cool">🤙 Shaka</span><br>TORNADO</div>
-            <div><span class="sacred">👍 Thumb</span><br>MERKABA</div>
-            <div><span class="cool">🖐️ Open</span><br>SHIELD</div>
-            <div><span class="key">☝️ Point</span><br>SATURN</div>
-            <div style="grid-column: span 2; border-top: 1px solid #555; padding-top:5px; text-align:center;">
-                <span class="danger">🤘 Rock</span> = NOVA BLAST
-            </div>
-        </div>
-    </div>
+    /* The Spell Circle Container */
+    #spell-container {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      pointer-events: none;
+      display: none; /* Hidden until hand is detected */
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    <script type="module">
-        import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+    /* Glow and Rings */
+    .ring {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      border: 2px solid rgba(255, 140, 0, 0.8);
+      border-radius: 50%;
+      box-shadow: 0 0 15px #ff4500, inset 0 0 15px #ff4500;
+    }
 
-        // --- Configuration ---
-        const PARTICLE_COUNT = 24000; 
-        const INTERACTION_RADIUS = 40;
-        const RETURN_SPEED = 0.08; 
+    .outer {
+      width: 280px; height: 280px;
+      border-style: double;
+      border-width: 6px;
+      animation: rotate 10s linear infinite;
+    }
+
+    .middle {
+      width: 200px; height: 200px;
+      border: 3px dashed #ffae00;
+      animation: rotate 5s linear infinite reverse;
+    }
+
+    .inner {
+      width: 120px; height: 120px;
+      border: 2px solid #fffb00;
+      animation: rotate 2s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    .status {
+      position: absolute;
+      top: 10px; left: 10px;
+      color: #ff8c00;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="status">Initializing Eldritch Magic...</div>
+  <video id="video_input"></video>
+  <canvas id="output_canvas"></canvas>
+
+  <div id="spell-container">
+    <div class="ring outer"></div>
+    <div class="ring middle"></div>
+    <div class="ring inner"></div>
+  </div>
+
+  <script type="module">
+    const videoElement = document.getElementById('video_input');
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    const spell = document.getElementById('spell-container');
+
+    function onResults(results) {
+      // Clear and draw the video frame
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        // We track the first hand detected
+        const hand = results.multiHandLandmarks[0];
         
-        // --- Variables ---
-        let scene, camera, renderer, particles;
-        let positions, originalPositions, colors;
-        let handPosition = new THREE.Vector3(9999, 9999, 9999); 
-        let currentShape = 'shield';
+        // Landmark 9 is the middle of the palm
+        const palm = hand[9]; 
         
-        // Explosion Logic
-        let explosionState = 'idle'; 
-        let explosionStartTime = 0;
-        
-        const clock = new THREE.Clock();
-        const colorObj = new THREE.Color();
-        
-        let gestureFrameCount = 0;
-        let lastGesture = '';
+        // Convert normalized coordinates (0-1) to screen pixels
+        // We flip X because the canvas is mirrored
+        const x = (1 - palm.x) * window.innerWidth;
+        const y = palm.y * window.innerHeight;
 
-        // --- 1. Three.js Initialization ---
-        function initThree() {
-            scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x000000, 0.001);
+        // Position the spell
+        spell.style.display = 'block';
+        spell.style.left = `${x}px`;
+        spell.style.top = `${y}px`;
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
-            camera.position.z = 160;
+        // Optional: Scale spell based on hand distance (Z-axis)
+        const scale = 1 + Math.abs(palm.z) * 5; 
+        spell.style.transform = `translate(-50%, -50%) scale(${scale})`;
+      } else {
+        spell.style.display = 'none';
+      }
+      canvasCtx.restore();
+    }
 
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            document.body.appendChild(renderer.domElement);
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
 
-            createParticleSystem();
-            setupShield(); 
-            
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-            
-            animate();
-        }
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
 
-        function createParticleSystem() {
-            const geometry = new THREE.BufferGeometry();
-            positions = new Float32Array(PARTICLE_COUNT * 3);
-            originalPositions = new Float32Array(PARTICLE_COUNT * 3);
-            colors = new Float32Array(PARTICLE_COUNT * 3);
+    hands.onResults(onResults);
 
-            for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
-                positions[i] = (Math.random() - 0.5) * 300;
-            }
-
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-            const material = new THREE.PointsMaterial({
-                size: 0.8, vertexColors: true, blending: THREE.AdditiveBlending,
-                depthTest: false, transparent: true, opacity: 0.95
-            });
-
-            particles = new THREE.Points(geometry, material);
-            scene.add(particles);
-        }
-
-        // --- 2. Color Manager ---
-        function updateColors(type) {
-             for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const x = originalPositions[i * 3];
-                const y = originalPositions[i * 3 + 1];
-                const z = originalPositions[i * 3 + 2];
-                const dist = Math.sqrt(x*x + y*y + z*z);
-                
-                if (type === 'explosion') {
-                     colorObj.setHSL(0.1, 1.0, 0.5); 
-                } else if (type === 'tornado') {
-                    colorObj.setHSL(0.6, 0.5, 0.4 + (y+100)/300);
-                } else if (type === 'merkaba') {
-                    if (y > 0) colorObj.setHSL(0.8, 1.0, 0.6); 
-                    else colorObj.setHSL(0.1, 1.0, 0.5); 
-                } else if (type === 'shield') {
-                    colorObj.setHSL(0.5, 1.0, 0.6); 
-                } else if (type === 'blackhole') {
-                    if (dist < 50) colorObj.setHSL(0.08, 1.0, 0.6); 
-                    else colorObj.setHSL(0.75, 0.8, 0.3);
-                } else if (type === 'galaxy') {
-                    if(dist < 20) colorObj.setHSL(0.15, 1.0, 0.7);
-                    else colorObj.setHSL(0.6 + Math.random()*0.3, 0.8, 0.6);
-                } else if (type === 'phoenix') {
-                    const wingSpan = Math.abs(x);
-                    colorObj.setHSL(0.05 + (0.15 - (wingSpan/1500)), 1.0, 0.5);
-                } else if (type === 'atom') {
-                    if (dist < 20) colorObj.setHSL(0.02, 1.0, 0.5); 
-                    else colorObj.setHSL(0.55, 1.0, 0.6); 
-                } else if (type === 'freefire') {
-                    // Gold blade, Red/Orange wings
-                    if (Math.abs(x) < 15) colorObj.setHSL(0.1, 1.0, 0.6); // Blade (Gold/Yellow)
-                    else colorObj.setHSL(0.05, 1.0, 0.5); // Wings (Red/Orange)
-                } else {
-                    colorObj.setHSL(0.6 + (dist/200), 0.8, 0.6);
-                }
-                
-                colors[i * 3] = colorObj.r;
-                colors[i * 3 + 1] = colorObj.g;
-                colors[i * 3 + 2] = colorObj.b;
-            }
-            particles.geometry.attributes.color.needsUpdate = true;
-        }
-
-        // --- 3. Shape Generators ---
-        let pIndex = 0;
-        function resetPIndex() { pIndex = 0; }
-        
-        function fillLine(start, end, count) {
-            const vec = new THREE.Vector3().subVectors(end, start);
-            for(let k=0; k<count; k++) {
-                if(pIndex>=PARTICLE_COUNT) break;
-                const t = Math.random();
-                originalPositions[pIndex*3] = start.x + vec.x*t + (Math.random()-0.5)*2;
-                originalPositions[pIndex*3+1] = start.y + vec.y*t + (Math.random()-0.5)*2;
-                originalPositions[pIndex*3+2] = start.z + vec.z*t + (Math.random()-0.5)*2;
-                pIndex++;
-            }
-        }
-
-        // --- SHAPE: FREE FIRE LOGO (Knife + Wings) ---
-        function setupFreeFire() {
-            if (currentShape === 'freefire') return;
-            currentShape = 'freefire';
-            explosionState = 'idle';
-            document.getElementById('status').innerText = "BOOYAH! (FREE FIRE)";
-            document.getElementById('status').style.color = "#ffd700";
-            resetPIndex();
-            
-            // 1. Central Blade (Wider top, sharp bottom)
-            const bladeParticles = 6000;
-            for(let i=0; i<bladeParticles; i++) {
-                // T goes from 1 (Top) to 0 (Tip)
-                const t = Math.random(); 
-                const y = t * 100 - 50; // -50 to 50
-                const width = t * 15; // Pointy at bottom, wide at top
-                originalPositions[pIndex*3] = (Math.random()-0.5) * width;
-                originalPositions[pIndex*3+1] = y;
-                originalPositions[pIndex*3+2] = (Math.random()-0.5) * 5;
-                pIndex++;
-            }
-
-            // 2. Wings (Curved)
-            const wingParticles = 8000;
-            for(let i=0; i<wingParticles; i++) {
-                if(pIndex >= PARTICLE_COUNT) break;
-                // t = -1 (Left) to 1 (Right), excluding center
-                let t = (Math.random() - 0.5) * 2;
-                if(Math.abs(t) < 0.2) continue; // Skip center (blade is there)
-                
-                const x = t * 100;
-                // Wing curve formula
-                const y = 30 - 30 * (t*t) + (Math.random()-0.5)*10;
-                
-                originalPositions[pIndex*3] = x;
-                originalPositions[pIndex*3+1] = y;
-                originalPositions[pIndex*3+2] = (Math.random()-0.5) * 5;
-                pIndex++;
-            }
-
-            // 3. Handle/Guard
-            const guardParticles = 2000;
-            fillLine(new THREE.Vector3(-20, 30, 0), new THREE.Vector3(20, 30, 0), guardParticles);
-
-            // Fill rest
-            while(pIndex < PARTICLE_COUNT) {
-                const r = 80 * Math.sqrt(Math.random());
-                const th = Math.random()*Math.PI*2;
-                originalPositions[pIndex*3] = r * Math.cos(th);
-                originalPositions[pIndex*3+1] = r * Math.sin(th);
-                originalPositions[pIndex*3+2] = (Math.random()-0.5)*20;
-                pIndex++;
-            }
-            updateColors('freefire');
-        }
-
-        // --- SHAPE: BLACK HOLE ---
-        function setupBlackHole() {
-            if (currentShape === 'blackhole') return;
-            currentShape = 'blackhole';
-            explosionState = 'idle';
-            document.getElementById('status').innerText = "BLACK HOLE";
-            document.getElementById('status').style.color = "#ff8800";
-            resetPIndex();
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const r = 35 + Math.random() * 120; 
-                const angle = Math.random() * Math.PI * 2;
-                originalPositions[i*3] = r * Math.cos(angle);
-                originalPositions[i*3+1] = (Math.random()-0.5) * (150/r) * 5; 
-                originalPositions[i*3+2] = r * Math.sin(angle);
-            }
-            updateColors('blackhole');
-        }
-
-        // --- SHAPE: GALAXY ---
-        function setupGalaxy() {
-            if (currentShape === 'galaxy') return;
-            currentShape = 'galaxy';
-            explosionState = 'idle';
-            document.getElementById('status').innerText = "SPIRAL GALAXY";
-            document.getElementById('status').style.color = "#ff00ff";
-            resetPIndex();
-            const arms = 4; const armWidth = 0.5; 
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const armIndex = i % arms;
-                const r = Math.random() * 140; 
-                const baseAngle = (r / 25) + (armIndex * (Math.PI * 2 / arms));
-                const angle = baseAngle + (Math.random()-0.5) * armWidth;
-                originalPositions[i*3] = r * Math.cos(angle);
-                originalPositions[i*3+1] = (Math.random()-0.5) * ((140-r)/140) * 40; 
-                originalPositions[i*3+2] = r * Math.sin(angle);
-            }
-            updateColors('galaxy');
-        }
-
-        // --- SHAPE: MERKABA ---
-        function setupMerkaba() {
-            if (currentShape === 'merkaba') return;
-            currentShape = 'merkaba';
-            explosionState = 'idle';
-            document.getElementById('status').innerText = "MERKABA";
-            document.getElementById('status').style.color = "#d400ff";
-            resetPIndex();
-            const s = 60; 
-            const t1_top = new THREE.Vector3(0, s, 0);
-            const t1_b1 = new THREE.Vector3(s*0.8, -s*0.3, s*0.5);
-            const t1_b2 = new THREE.Vector3(-s*0.8, -s*0.3, s*0.5);
-            const t1_b3 = new THREE.Vector3(0, -s*0.3, -s);
-            const t2_bot = new THREE.Vector3(0, -s, 0);
-            const t2_b1 = new THREE.Vector3(s*0.8, s*0.3, s*0.5);
-            const t2_b2 = new THREE.Vector3(-s*0.8, s*0.3, s*0.5);
-            const t2_b3 = new THREE.Vector3(0, s*0.3, -s);
-            const edgeCount = 800;
-            fillLine(t1_top, t1_b1, edgeCount); fillLine(t1_top, t1_b2, edgeCount); fillLine(t1_top, t1_b3, edgeCount);
-            fillLine(t1_b1, t1_b2, edgeCount); fillLine(t1_b2, t1_b3, edgeCount); fillLine(t1_b3, t1_b1, edgeCount);
-            fillLine(t2_bot, t2_b1, edgeCount); fillLine(t2_bot, t2_b2, edgeCount); fillLine(t2_bot, t2_b3, edgeCount);
-            fillLine(t2_b1, t2_b2, edgeCount); fillLine(t2_b2, t2_b3, edgeCount); fillLine(t2_b3, t2_b1, edgeCount);
-            while(pIndex < PARTICLE_COUNT) {
-                const r = 90 * Math.cbrt(Math.random());
-                const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
-                originalPositions[pIndex*3] = r*Math.sin(ph)*Math.cos(th);
-                originalPositions[pIndex*3+1] = r*Math.sin(ph)*Math.sin(th);
-                originalPositions[pIndex*3+2] = r*Math.cos(ph);
-                pIndex++;
-            }
-            updateColors('merkaba');
-        }
-
-        // --- SHAPE: SHIELD ---
-        function setupShield() {
-            if (currentShape === 'shield') return;
-            currentShape = 'shield';
-            explosionState = 'idle';
-            document.getElementById('status').innerText = "ENERGY SHIELD";
-            document.getElementById('status').style.color = "#00ffff";
-            resetPIndex();
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const radius = Math.sqrt(Math.random()) * 80; 
-                const angle = Math.random() * Math.PI * 2;
-                originalPositions[i*3] = radius * Math.cos(angle);
-                originalPositions[i*3+1] = radius * Math.sin(angle);
-                originalPositions[i*3+2] = Math.sqrt(80*80 - radius*radius) * 0.4;
-            }
-            updateColors('shield');
-        }
-
-        // --- SHAPE: TORNADO ---
-        function setupTornado() {
-            if (currentShape === 'tornado') return;
-            currentShape = 'tornado';
-            explosionState = 'idle';
-            document.getElementById('status').innerText = "TORNADO";
-            document.getElementById('status').style.color = "#aaa";
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const height = (Math.random() - 0.5) * 250; 
-                const t = (height + 125) / 250; 
-                const radius = 5 + Math.pow(t, 1.5) * 100; 
-                const angle = Math.random() * Math.PI * 2;
-                originalPositions[i*3] = radius * Math.cos(angle);
-                originalPositions[i*3+1] = height;
-                originalPositions[i*3+2] = radius * Math.sin(angle);
-            }
-            updateColors('tornado');
-        }
-
-        // --- SHAPE: PHOENIX ---
-        function setupPhoenix() {
-            if (currentShape === 'phoenix') return;
-            currentShape = 'phoenix';
-            explosionState = 'idle';
-            document.getElementById('status').innerText = "PHOENIX";
-            document.getElementById('status').style.color = "#ff5500";
-            resetPIndex();
-            // Body
-            for(let i=0; i<2000; i++) {
-                 originalPositions[pIndex*3] = (Math.random()-0.5)*10;
-                 originalPositions[pIndex*3+1] = (Math.random()-0.5)*60;
-                 originalPositions[pIndex*3+2] = (Math.random()-0.5)*10;
-                 pIndex++;
-            }
-            // Wings
-            while(pIndex < PARTICLE_COUNT) {
-                const t = (Math.random()-0.5)*2; 
-                const x = t * 120;
-                const y = 20 - 40 * (t*t);
-                originalPositions[pIndex*3] = x;
-                originalPositions[pIndex*3+1] = y + (Math.random()-0.5)*10;
-                originalPositions[pIndex*3+2] = -20*Math.abs(t) + (Math.random()-0.5)*10;
-                pIndex++;
-            }
-            updateColors('phoenix');
-        }
-
-        // --- SHAPE: ATOM ---
-        function setupAtom() {
-            if (currentShape === 'atom') return;
-            currentShape = 'atom';
-            explosionState = 'idle';
-            document.getElementById('status').innerText = "ATOM";
-            document.getElementById('status').style.color = "#00ffff";
-            resetPIndex();
-            // Nucleus
-            for(let i=0; i<5000; i++) {
-                 const r = 15*Math.cbrt(Math.random());
-                 const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
-                 originalPositions[pIndex*3] = r*Math.sin(ph)*Math.cos(th);
-                 originalPositions[pIndex*3+1] = r*Math.sin(ph)*Math.sin(th);
-                 originalPositions[pIndex*3+2] = r*Math.cos(ph);
-                 pIndex++;
-            }
-            // Electron Orbits
-            while(pIndex < PARTICLE_COUNT) {
-                const r = 60 + (Math.random()-0.5)*10;
-                const a = Math.random()*Math.PI*2;
-                const orbit = Math.floor(Math.random()*3);
-                let x = r*Math.cos(a); let y = r*Math.sin(a); let z=0;
-                if(orbit===1) { let t=y; y=t*0.5; z=t*0.866; } 
-                if(orbit===2) { let t=y; y=t*0.5; z=-t*0.866; } 
-                originalPositions[pIndex*3]=x; originalPositions[pIndex*3+1]=y; originalPositions[pIndex*3+2]=z;
-                pIndex++;
-            }
-            updateColors('atom');
-        }
-        
-        // --- SHAPE: SATURN ---
-        function setupSaturn() {
-             if (currentShape === 'saturn') return;
-            currentShape = 'saturn';
-            explosionState = 'idle';
-            document.getElementById('status').innerText = "SATURN";
-            document.getElementById('status').style.color = "#ffaa00";
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                 if(i < PARTICLE_COUNT*0.4) {
-                     const r = 35*Math.cbrt(Math.random());
-                     const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
-                     originalPositions[i*3] = r*Math.sin(ph)*Math.cos(th);
-                     originalPositions[i*3+1] = r*Math.sin(ph)*Math.sin(th);
-                     originalPositions[i*3+2] = r*Math.cos(ph);
-                 } else {
-                     const r = 50 + Math.random()*30;
-                     const a = Math.random()*Math.PI*2;
-                     originalPositions[i*3] = r*Math.cos(a);
-                     originalPositions[i*3+1] = (Math.random()-0.5)*2;
-                     originalPositions[i*3+2] = r*Math.sin(a);
-                 }
-            }
-            updateColors('saturn');
-        }
-
-        // --- EXPLOSION LOGIC ---
-        function triggerSuperNova() {
-            if (currentShape === 'nova') return;
-            currentShape = 'nova';
-            explosionState = 'imploding';
-            explosionStartTime = clock.getElapsedTime();
-            document.getElementById('status').innerText = "⚠️ IMPLOSION";
-            document.getElementById('status').style.color = "red";
-            updateColors('explosion');
-        }
-
-        function updateExplosionLogic(time) {
-            const elapsed = time - explosionStartTime;
-            if (explosionState === 'imploding') {
-                for(let i=0; i<PARTICLE_COUNT; i++) {
-                    originalPositions[i*3] *= 0.90; 
-                    originalPositions[i*3+1] *= 0.90;
-                    originalPositions[i*3+2] *= 0.90;
-                }
-                if (elapsed > 1.5) {
-                    explosionState = 'exploding';
-                    document.getElementById('status').innerText = "💥 SUPER NOVA";
-                    for(let i=0; i<PARTICLE_COUNT; i++) {
-                        const r = 400 + Math.random()*500; 
-                        const th = Math.random()*Math.PI*2; const ph = Math.acos(2*Math.random()-1);
-                        originalPositions[i*3] = r*Math.sin(ph)*Math.cos(th);
-                        originalPositions[i*3+1] = r*Math.sin(ph)*Math.sin(th);
-                        originalPositions[i*3+2] = r*Math.cos(ph);
-                    }
-                }
-            }
-        }
-
-        // --- 5. Animation Loop ---
-        function animate() {
-            requestAnimationFrame(animate);
-            const time = clock.getElapsedTime();
-
-            if (currentShape === 'nova') {
-                updateExplosionLogic(time);
-                particles.rotation.y += 0.05;
-            } else if (currentShape === 'tornado') {
-                particles.rotation.y -= 0.25; 
-                particles.rotation.x = 0;
-            } else if (currentShape === 'merkaba') {
-                particles.rotation.y = time * 0.4;
-                particles.rotation.z = time * 0.2;
-            } else if (currentShape === 'blackhole') {
-                particles.rotation.y -= 0.05;
-                particles.rotation.x = 0.5; 
-            } else if (currentShape === 'galaxy') {
-                particles.rotation.y = time * 0.1;
-                particles.rotation.x = 0.3; 
-            } else if (currentShape === 'atom') {
-                particles.rotation.y = time * 0.5;
-                particles.rotation.z = Math.sin(time*0.5)*0.2;
-            } else if (currentShape === 'shield') {
-                particles.rotation.y = 0;
-                particles.rotation.z = 0;
-            } else if (currentShape === 'phoenix') {
-                particles.rotation.y = Math.sin(time*0.5)*0.2;
-            } else if (currentShape === 'freefire') {
-                 particles.rotation.y = Math.sin(time) * 0.3; // Gentle wobble
-            } else {
-                particles.rotation.y = time * 0.1;
-            }
-            
-            updateParticles(time);
-            renderer.render(scene, camera);
-        }
-
-        function updateParticles(time) {
-            const localHand = handPosition.clone();
-            localHand.applyEuler(new THREE.Euler(-particles.rotation.x, -particles.rotation.y, -particles.rotation.z));
-            const pArray = particles.geometry.attributes.position.array;
-
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const ix = i * 3; const iy = i * 3 + 1; const iz = i * 3 + 2;
-                let px = pArray[ix]; let py = pArray[iy]; let pz = pArray[iz];
-                let ox = originalPositions[ix]; let oy = originalPositions[iy]; let oz = originalPositions[iz];
-
-                if (currentShape === 'phoenix' && Math.abs(ox) > 15) {
-                    oy += Math.sin(time * 3) * (Math.abs(ox) / 100) * 20;
-                }
-
-                if (currentShape === 'blackhole') {
-                    const dist = Math.sqrt(ox*ox + oz*oz);
-                    if (dist < 80) {
-                        const angle = time * (100/dist); 
-                        const r = dist;
-                        const initialAngle = Math.atan2(oz, ox);
-                        ox = r * Math.cos(initialAngle + angle);
-                        oz = r * Math.sin(initialAngle + angle);
-                    }
-                }
-
-                const dx = px - localHand.x;
-                const dy = py - localHand.y;
-                const dz = pz - localHand.z;
-                const distSq = dx*dx + dy*dy + dz*dz;
-
-                if (distSq < INTERACTION_RADIUS * INTERACTION_RADIUS) {
-                    const dist = Math.sqrt(distSq);
-                    const force = (INTERACTION_RADIUS - dist) / INTERACTION_RADIUS; 
-                    pArray[ix] += (dx/dist) * force * 5;
-                    pArray[iy] += (dy/dist) * force * 5;
-                    pArray[iz] += (dz/dist) * force * 5;
-                } else {
-                    const speed = (currentShape === 'nova' && explosionState === 'exploding') ? 0.3 : RETURN_SPEED;
-                    pArray[ix] += (ox - px) * speed;
-                    pArray[iy] += (oy - py) * speed;
-                    pArray[iz] += (oz - pz) * speed;
-                }
-            }
-            particles.geometry.attributes.position.needsUpdate = true;
-        }
-
-        // --- 6. MediaPipe Gesture Logic (FINGER SIGNATURES) ---
-        
-        function isFingerUp(landmarks, fingerIndex) {
-            const tip = landmarks[fingerIndex * 4 + 4];
-            const pip = landmarks[fingerIndex * 4 + 2];
-            return tip.y < pip.y; 
-        }
-
-        function isThumbUp(landmarks) {
-            const tip = landmarks[4];
-            const indexMcp = landmarks[5];
-            const dist = Math.sqrt(Math.pow(tip.x - indexMcp.x, 2) + Math.pow(tip.y - indexMcp.y, 2));
-            return dist > 0.08; 
-        }
-
-        function detectGesture(lm) {
-            const thumb = isThumbUp(lm) ? 1 : 0;
-            const index = isFingerUp(lm, 1) ? 1 : 0;
-            const middle = isFingerUp(lm, 2) ? 1 : 0;
-            const ring = isFingerUp(lm, 3) ? 1 : 0;
-            const pinky = isFingerUp(lm, 4) ? 1 : 0;
-
-            const sig = `${thumb}${index}${middle}${ring}${pinky}`;
-
-            // SIGNATURE MAP
-            if (sig === '00000') return 'blackhole'; // Fist
-            if (sig === '01000') return 'point'; // One Finger
-            if (sig === '10000') return 'thumb'; // Thumb Only
-            
-            if (sig === '11001') return 'atom'; // SPIDER-MAN
-            
-            if (sig === '01111') return 'phoenix'; // 4 FINGERS
-            if (sig === '01100') return 'freefire'; // PEACE SIGN
-
-            if (sig === '11000') return 'l_shape'; // L-Sign
-            if (sig === '01001') return 'explode'; // Rock
-            if (sig === '10001') return 'shaka'; // Shaka
-            
-            if (sig === '11111' || sig === '11110') return 'open'; // Open
-
-            return 'unknown';
-        }
-
-        function onResults(results) {
-            document.getElementById('loading').style.display = 'none';
-
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const landmarks = results.multiHandLandmarks[0];
-                const palmCenter = landmarks[9];
-                const x = (0.5 - palmCenter.x) * 250; 
-                const y = (0.5 - palmCenter.y) * 200; 
-                const z = 30;
-                handPosition.lerp(new THREE.Vector3(x, y, z), 0.2);
-
-                const gesture = detectGesture(landmarks);
-
-                if (gesture === lastGesture) {
-                    gestureFrameCount++;
-                } else {
-                    gestureFrameCount = 0;
-                    lastGesture = gesture;
-                }
-
-                if (gestureFrameCount > 8) {
-                    if (gesture === 'open') setupShield();
-                    else if (gesture === 'shaka') setupTornado(); 
-                    else if (gesture === 'thumb') setupMerkaba();
-                    else if (gesture === 'point') setupSaturn();
-                    else if (gesture === 'atom') setupAtom();
-                    else if (gesture === 'phoenix') setupPhoenix();
-                    else if (gesture === 'blackhole') setupBlackHole();
-                    else if (gesture === 'l_shape') setupGalaxy();
-                    else if (gesture === 'explode') triggerSuperNova();
-                    else if (gesture === 'freefire') setupFreeFire();
-                }
-            } else {
-                handPosition.lerp(new THREE.Vector3(9999, 9999, 9999), 0.1);
-            }
-        }
-
-        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-        hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-        hands.onResults(onResults);
-
-        const videoElement = document.getElementById('input-video');
-        const cameraUtils = new Camera(videoElement, {
-            onFrame: async () => { await hands.send({image: videoElement}); },
-            width: 640, height: 480
-        });
-        cameraUtils.start();
-
-        initThree();
-
-    </script>
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({image: videoElement});
+      },
+      width: 1280,
+      height: 720
+    });
+    camera.start();
+    
+    document.querySelector('.status').innerText = "Magic Ready: Show your hand";
+  </script>
 </body>
 </html>
-
