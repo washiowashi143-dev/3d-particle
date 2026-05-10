@@ -1,0 +1,2108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NVS Editor — 侍編集者</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700;900&family=Cinzel+Decorative:wght@400;700;900&family=Sawarabi+Mincho&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blood: #8B0000;
+    --crimson: #DC143C;
+    --ember: #FF4500;
+    --gold: #C8A951;
+    --ash: #1a1a1a;
+    --obsidian: #0a0a0a;
+    --smoke: rgba(255,255,255,0.07);
+    --ink: #e8e0d0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--obsidian);
+    color: var(--ink);
+    font-family: 'Noto Serif JP', serif;
+    overflow-x: hidden;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z' fill='%23DC143C' stroke='%23C8A951' stroke-width='1'/%3E%3C/svg%3E") 12 12, crosshair;
+  }
+
+  /* ══════════════════════════════════════
+     HERO / CANVAS SECTION
+  ══════════════════════════════════════ */
+  #hero {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #050505;
+  }
+
+  #samurai-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.2) 0%,
+      rgba(0,0,0,0.1) 50%,
+      rgba(0,0,0,0.85) 100%
+    );
+    z-index: 2;
+  }
+
+  .hero-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 3;
+    animation: fadeInHero 2s ease 0.5s both;
+  }
+
+  @keyframes fadeInHero {
+    from { opacity: 0; transform: translate(-50%, -48%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+  }
+
+  .logo-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-svg-wrap {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 16px;
+    filter: drop-shadow(0 0 30px var(--crimson));
+    animation: logoPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes logoPulse {
+    0%, 100% { filter: drop-shadow(0 0 20px var(--crimson)); }
+    50% { filter: drop-shadow(0 0 50px var(--crimson)) drop-shadow(0 0 80px var(--blood)); }
+  }
+
+  .site-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 900;
+    letter-spacing: 0.3em;
+    color: var(--ink);
+    text-shadow: 0 0 40px var(--crimson), 0 0 80px var(--blood);
+    line-height: 1;
+  }
+
+  .site-kanji {
+    font-family: 'Noto Serif JP', serif;
+    font-size: clamp(1rem, 2.5vw, 1.6rem);
+    font-weight: 300;
+    letter-spacing: 0.6em;
+    color: var(--gold);
+    text-shadow: 0 0 20px var(--gold);
+  }
+
+  .site-tagline {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: clamp(0.75rem, 1.5vw, 1rem);
+    letter-spacing: 0.25em;
+    color: rgba(200,169,81,0.7);
+    margin-top: 8px;
+  }
+
+  .hero-cta {
+    margin-top: 40px;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    padding: 14px 36px;
+    background: var(--blood);
+    color: var(--ink);
+    border: 1px solid var(--crimson);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+
+  .btn-primary:hover::before { transform: translateX(100%); }
+  .btn-primary:hover {
+    background: var(--crimson);
+    box-shadow: 0 0 30px var(--crimson), 0 0 60px var(--blood);
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    padding: 14px 36px;
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    cursor: pointer;
+    transition: all 0.3s;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(200,169,81,0.15);
+    box-shadow: 0 0 20px var(--gold);
+    transform: translateY(-2px);
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.6;
+    animation: bounce 2s ease-in-out infinite;
+  }
+
+  .scroll-hint span {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    color: var(--gold);
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-8px); }
+  }
+
+  /* ══════════════════════════════════════
+     NAV
+  ══════════════════════════════════════ */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to bottom, rgba(5,5,5,0.95), transparent);
+    backdrop-filter: blur(4px);
+  }
+
+  .nav-logo {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--crimson);
+    letter-spacing: 0.15em;
+    text-shadow: 0 0 20px var(--crimson);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    color: var(--ink);
+    text-decoration: none;
+    transition: color 0.3s;
+    position: relative;
+  }
+
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0; right: 0;
+    height: 1px;
+    background: var(--crimson);
+    transform: scaleX(0);
+    transition: transform 0.3s;
+  }
+
+  .nav-links a:hover { color: var(--crimson); }
+  .nav-links a:hover::after { transform: scaleX(1); }
+
+  /* ══════════════════════════════════════
+     DIVIDER
+  ══════════════════════════════════════ */
+  .kamon-divider {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 40px 60px;
+    opacity: 0.4;
+  }
+
+  .kamon-divider::before, .kamon-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--gold), transparent);
+  }
+
+  .kamon-divider span {
+    color: var(--gold);
+    font-size: 1.2rem;
+  }
+
+  /* ══════════════════════════════════════
+     SECTION STYLES
+  ══════════════════════════════════════ */
+  section {
+    position: relative;
+    padding: 80px 60px;
+    overflow: hidden;
+  }
+
+  .section-bg-pattern {
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(
+        45deg,
+        rgba(200,169,81,0.02) 0px,
+        rgba(200,169,81,0.02) 1px,
+        transparent 1px,
+        transparent 20px
+      );
+    pointer-events: none;
+  }
+
+  .section-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
+    font-weight: 700;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 8px;
+    text-shadow: 0 0 20px var(--gold);
+  }
+
+  .section-kanji {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 0.85rem;
+    color: var(--crimson);
+    text-align: center;
+    letter-spacing: 0.5em;
+    margin-bottom: 60px;
+  }
+
+  /* ══════════════════════════════════════
+     FEATURES GRID
+  ══════════════════════════════════════ */
+  #features { background: var(--ash); }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .feature-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(200,169,81,0.2);
+    padding: 36px 28px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--crimson);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.4s;
+  }
+
+  .feature-card:hover {
+    border-color: rgba(220,20,60,0.5);
+    background: rgba(139,0,0,0.08);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 40px rgba(139,0,0,0.2);
+  }
+
+  .feature-card:hover::before { transform: scaleY(1); }
+
+  .feature-icon {
+    font-size: 2rem;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .feature-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.9rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+
+  .feature-desc {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.85rem;
+    color: rgba(232,224,208,0.7);
+    line-height: 1.8;
+  }
+
+  .feature-kanji-bg {
+    position: absolute;
+    bottom: -10px; right: 10px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 5rem;
+    color: rgba(200,169,81,0.05);
+    font-weight: 900;
+    pointer-events: none;
+  }
+
+  /* ══════════════════════════════════════
+     UPLOAD SECTION
+  ══════════════════════════════════════ */
+  #upload {
+    background: linear-gradient(135deg, #0a0a0a 0%, #150505 50%, #0a0a0a 100%);
+    text-align: center;
+  }
+
+  .upload-arena {
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .upload-box {
+    border: 2px dashed rgba(220,20,60,0.4);
+    padding: 60px 40px;
+    position: relative;
+    background: rgba(139,0,0,0.05);
+    transition: all 0.3s;
+    cursor: pointer;
+    clip-path: polygon(20px 0%, 100% 0%, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0% 100%, 0% 20px);
+  }
+
+  .upload-box:hover, .upload-box.drag-over {
+    border-color: var(--crimson);
+    background: rgba(139,0,0,0.12);
+    box-shadow: 0 0 40px rgba(139,0,0,0.2), inset 0 0 40px rgba(139,0,0,0.05);
+  }
+
+  .upload-box input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon { font-size: 3rem; margin-bottom: 16px; }
+
+  .upload-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.1rem;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .upload-sub {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.8rem;
+    color: rgba(232,224,208,0.5);
+    margin-bottom: 24px;
+  }
+
+  .upload-accepted {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+
+  .upload-tag {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    padding: 4px 12px;
+    background: rgba(200,169,81,0.1);
+    border: 1px solid rgba(200,169,81,0.3);
+    color: var(--gold);
+  }
+
+  .email-note {
+    margin-top: 24px;
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.8rem;
+    color: rgba(232,224,208,0.5);
+  }
+
+  .email-note a {
+    color: var(--crimson);
+    text-decoration: none;
+  }
+
+  .email-note a:hover { text-shadow: 0 0 10px var(--crimson); }
+
+  /* ══════════════════════════════════════
+     TOOLS SHOWCASE
+  ══════════════════════════════════════ */
+  #tools { background: #0d0d0d; }
+
+  .tools-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 40px;
+    border: 1px solid rgba(200,169,81,0.2);
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .tab-btn {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    padding: 12px 28px;
+    background: transparent;
+    color: rgba(232,224,208,0.5);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-right: 1px solid rgba(200,169,81,0.2);
+  }
+
+  .tab-btn:last-child { border-right: none; }
+
+  .tab-btn.active {
+    background: var(--blood);
+    color: var(--ink);
+    text-shadow: 0 0 10px var(--crimson);
+  }
+
+  .tab-btn:hover:not(.active) {
+    background: rgba(139,0,0,0.15);
+    color: var(--ink);
+  }
+
+  .tools-panel { display: none; }
+  .tools-panel.active { display: block; }
+
+  .tools-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .tool-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(200,169,81,0.1);
+    transition: all 0.3s;
+  }
+
+  .tool-item:hover {
+    border-color: rgba(220,20,60,0.4);
+    background: rgba(139,0,0,0.06);
+    transform: translateX(4px);
+  }
+
+  .tool-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--crimson);
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px var(--crimson);
+  }
+
+  .tool-name {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.8rem;
+    color: var(--ink);
+  }
+
+  /* ══════════════════════════════════════
+     STATS
+  ══════════════════════════════════════ */
+  #stats {
+    background: linear-gradient(to bottom, #0d0d0d, var(--ash));
+    text-align: center;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 40px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .stat-item { position: relative; }
+
+  .stat-number {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    color: var(--crimson);
+    text-shadow: 0 0 30px var(--crimson);
+    display: block;
+  }
+
+  .stat-label {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    color: rgba(232,224,208,0.6);
+    margin-top: 8px;
+  }
+
+  /* ══════════════════════════════════════
+     FOOTER
+  ══════════════════════════════════════ */
+  footer {
+    background: var(--obsidian);
+    padding: 60px;
+    text-align: center;
+    border-top: 1px solid rgba(200,169,81,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+
+  footer::before {
+    content: '侍';
+    position: absolute;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 20rem;
+    color: rgba(139,0,0,0.04);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    font-weight: 900;
+  }
+
+  .footer-logo {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.5rem;
+    color: var(--crimson);
+    text-shadow: 0 0 20px var(--crimson);
+    margin-bottom: 12px;
+  }
+
+  .footer-kanji {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 0.85rem;
+    color: var(--gold);
+    letter-spacing: 0.4em;
+    margin-bottom: 24px;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    list-style: none;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+
+  .footer-links a {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    color: rgba(232,224,208,0.5);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+
+  .footer-links a:hover { color: var(--crimson); }
+
+  .footer-copy {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.7rem;
+    color: rgba(232,224,208,0.3);
+    letter-spacing: 0.1em;
+  }
+
+  /* ══════════════════════════════════════
+     POPUP / MODAL
+  ══════════════════════════════════════ */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: linear-gradient(135deg, #1a0000, #0d0000);
+    border: 1px solid var(--crimson);
+    padding: 48px 40px;
+    max-width: 520px;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 0 60px rgba(139,0,0,0.4), 0 0 120px rgba(139,0,0,0.2);
+    clip-path: polygon(20px 0%, 100% 0%, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0% 100%, 0% 20px);
+    transform: scale(0.9);
+    transition: transform 0.4s;
+  }
+
+  .modal-overlay.active .modal {
+    transform: scale(1);
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: none;
+    border: none;
+    color: var(--crimson);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: transform 0.3s;
+    font-family: 'Cinzel Decorative', serif;
+  }
+
+  .modal-close:hover { transform: rotate(90deg); }
+
+  .modal-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.1rem;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 8px;
+    text-shadow: 0 0 20px var(--gold);
+  }
+
+  .modal-kanji {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 0.8rem;
+    color: var(--crimson);
+    text-align: center;
+    letter-spacing: 0.4em;
+    margin-bottom: 32px;
+  }
+
+  .modal-input-group {
+    margin-bottom: 16px;
+  }
+
+  .modal-input-group label {
+    display: block;
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.75rem;
+    color: rgba(232,224,208,0.6);
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+
+  .modal-input-group input,
+  .modal-input-group textarea,
+  .modal-input-group select {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(220,20,60,0.3);
+    color: var(--ink);
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.85rem;
+    padding: 10px 16px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  .modal-input-group input:focus,
+  .modal-input-group textarea:focus {
+    border-color: var(--crimson);
+    box-shadow: 0 0 10px rgba(220,20,60,0.2);
+  }
+
+  .modal-input-group textarea { height: 80px; resize: none; }
+
+  .modal-file-upload {
+    border: 1px dashed rgba(220,20,60,0.4);
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 16px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s;
+  }
+
+  .modal-file-upload:hover { background: rgba(139,0,0,0.1); border-color: var(--crimson); }
+
+  .modal-file-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  .modal-file-text {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.8rem;
+    color: rgba(232,224,208,0.5);
+  }
+
+  #selected-files-list {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.75rem;
+    color: var(--gold);
+    margin-bottom: 16px;
+    min-height: 20px;
+  }
+
+  .modal-submit {
+    width: 100%;
+    padding: 14px;
+    background: var(--blood);
+    color: var(--ink);
+    border: 1px solid var(--crimson);
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .modal-submit::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+
+  .modal-submit:hover::before { transform: translateX(100%); }
+  .modal-submit:hover {
+    background: var(--crimson);
+    box-shadow: 0 0 20px var(--crimson);
+  }
+
+  .modal-note {
+    margin-top: 16px;
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.7rem;
+    color: rgba(232,224,208,0.4);
+    text-align: center;
+  }
+
+  /* ══════════════════════════════════════
+     SUCCESS TOAST
+  ══════════════════════════════════════ */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 2000;
+    background: linear-gradient(135deg, #1a0000, #300000);
+    border: 1px solid var(--crimson);
+    padding: 16px 24px;
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.85rem;
+    color: var(--ink);
+    box-shadow: 0 0 30px rgba(220,20,60,0.4);
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transform: translateX(200%);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .toast.show { transform: translateX(0); }
+
+  /* ══════════════════════════════════════
+     SCROLL ANIMATIONS
+  ══════════════════════════════════════ */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ══════════════════════════════════════
+     RED CORNERS DECORATION
+  ══════════════════════════════════════ */
+  .corner-decoration {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    opacity: 0.4;
+  }
+
+  .corner-tl { top: 20px; left: 20px; border-top: 2px solid var(--crimson); border-left: 2px solid var(--crimson); }
+  .corner-tr { top: 20px; right: 20px; border-top: 2px solid var(--crimson); border-right: 2px solid var(--crimson); }
+  .corner-bl { bottom: 20px; left: 20px; border-bottom: 2px solid var(--crimson); border-left: 2px solid var(--crimson); }
+  .corner-br { bottom: 20px; right: 20px; border-bottom: 2px solid var(--crimson); border-right: 2px solid var(--crimson); }
+
+  /* ══════════════════════════════════════
+     RESPONSIVE
+  ══════════════════════════════════════ */
+  @media (max-width: 768px) {
+    nav { padding: 14px 20px; }
+    .nav-links { display: none; }
+    section { padding: 60px 24px; }
+    footer { padding: 40px 24px; }
+    .hero-cta { flex-direction: column; align-items: center; }
+  }
+
+  /* ══════════════════════════════════════
+     BLADE SLASH EFFECT
+  ══════════════════════════════════════ */
+  .slash-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    overflow: hidden;
+  }
+
+  .slash-line {
+    position: absolute;
+    width: 2px;
+    height: 0;
+    background: linear-gradient(to bottom, transparent, var(--crimson), transparent);
+    opacity: 0;
+    transition: none;
+    box-shadow: 0 0 8px var(--crimson);
+  }
+
+  /* Sword progress indicator */
+  .sword-progress {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.6;
+  }
+
+  .sword-progress-bar {
+    width: 2px;
+    height: 120px;
+    background: rgba(200,169,81,0.2);
+    position: relative;
+    border-radius: 1px;
+  }
+
+  .sword-progress-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, var(--crimson), var(--gold));
+    border-radius: 1px;
+    transition: height 0.1s;
+    box-shadow: 0 0 8px var(--crimson);
+  }
+
+  .sword-progress-tip {
+    width: 8px;
+    height: 8px;
+    background: var(--gold);
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+    box-shadow: 0 0 8px var(--gold);
+  }
+
+  /* Falling leaves */
+  .leaf {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10;
+    font-size: 14px;
+    color: rgba(200,80,30,0.8);
+    animation: leafFall linear infinite;
+    text-shadow: 0 0 4px rgba(255,100,0,0.4);
+  }
+
+  @keyframes leafFall {
+    0% { transform: translateY(-40px) rotate(0deg) translateX(0); opacity: 0.8; }
+    25% { transform: translateY(25vh) rotate(90deg) translateX(20px); }
+    50% { transform: translateY(50vh) rotate(180deg) translateX(-15px); }
+    75% { transform: translateY(75vh) rotate(270deg) translateX(25px); }
+    100% { transform: translateY(110vh) rotate(360deg) translateX(0); opacity: 0; }
+  }
+
+  /* ══════════════════════════════════════
+     HOW IT WORKS
+  ══════════════════════════════════════ */
+  #how { background: #0a0a0a; }
+
+  .steps-timeline {
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .steps-timeline::before {
+    content: '';
+    position: absolute;
+    left: 28px;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--crimson), transparent);
+  }
+
+  .step-item {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    margin-bottom: 48px;
+  }
+
+  .step-num {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--obsidian);
+    background: var(--crimson);
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(139,0,0,0.5);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  }
+
+  .step-content {}
+
+  .step-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.95rem;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+
+  .step-desc {
+    font-family: 'Sawarabi Mincho', serif;
+    font-size: 0.85rem;
+    color: rgba(232,224,208,0.6);
+    line-height: 1.8;
+  }
+
+  /* inline red badge for email */
+  .inline-red {
+    color: var(--crimson);
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ SLASH OVERLAY ═══════════ -->
+<div class="slash-overlay" id="slashOverlay"></div>
+
+<!-- ═══════════ SWORD PROGRESS ═══════════ -->
+<div class="sword-progress">
+  <div class="sword-progress-bar">
+    <div class="sword-progress-fill" id="swordFill" style="height:0%"></div>
+  </div>
+  <div class="sword-progress-tip"></div>
+</div>
+
+<!-- ═══════════ NAV ═══════════ -->
+<nav>
+  <div class="nav-logo">NVS 侍</div>
+  <ul class="nav-links">
+    <li><a href="#features">武器 Arsenal</a></li>
+    <li><a href="#tools">道具 Tools</a></li>
+    <li><a href="#how">方法 How</a></li>
+    <li><a href="#upload">送信 Upload</a></li>
+  </ul>
+  <button class="btn-primary" style="font-size:0.7rem;padding:10px 22px;" onclick="openModal()">Start Free →</button>
+</nav>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section id="hero">
+  <canvas id="samurai-canvas"></canvas>
+  <div class="hero-overlay"></div>
+
+  <div class="hero-content">
+    <div class="logo-container">
+      <!-- SVG LOGO -->
+      <div class="logo-svg-wrap">
+        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <!-- Outer ring -->
+          <circle cx="60" cy="60" r="56" fill="none" stroke="#8B0000" stroke-width="1.5"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#C8A951" stroke-width="0.5" opacity="0.5"/>
+          <!-- Kamon petals -->
+          <g fill="none" stroke="#C8A951" stroke-width="0.8" opacity="0.6">
+            <circle cx="60" cy="34" r="12"/>
+            <circle cx="82" cy="47" r="12"/>
+            <circle cx="82" cy="73" r="12"/>
+            <circle cx="60" cy="86" r="12"/>
+            <circle cx="38" cy="73" r="12"/>
+            <circle cx="38" cy="47" r="12"/>
+          </g>
+          <!-- Center circle -->
+          <circle cx="60" cy="60" r="20" fill="#0d0000" stroke="#8B0000" stroke-width="1.5"/>
+          <!-- Sword through center -->
+          <line x1="60" y1="10" x2="60" y2="110" stroke="#C8A951" stroke-width="1.5"/>
+          <path d="M55 10 L65 10 L62 30 L58 30 Z" fill="#C8A951"/>
+          <!-- Guard -->
+          <rect x="48" y="65" width="24" height="5" rx="1" fill="#8B0000"/>
+          <rect x="46" y="63" width="3" height="9" rx="1" fill="#8B0000"/>
+          <rect x="71" y="63" width="3" height="9" rx="1" fill="#8B0000"/>
+          <!-- NVS text -->
+          <text x="60" y="57" font-family="Cinzel Decorative, serif" font-size="8" fill="#DC143C" text-anchor="middle" font-weight="700" letter-spacing="1">NVS</text>
+          <text x="60" y="67" font-family="Noto Serif JP, serif" font-size="5" fill="#C8A951" text-anchor="middle" opacity="0.8">侍編集</text>
+        </svg>
+      </div>
+      <div class="site-title">NVS EDITOR</div>
+      <div class="site-kanji">侍の編集者 — The Samurai Editor</div>
+      <div class="site-tagline">Free Video & Photo Editing • Forged in Darkness • Precise as a Blade</div>
+    </div>
+
+    <div class="hero-cta">
+      <a href="#upload" class="btn-primary">⚔ Begin Editing</a>
+      <a href="#features" class="btn-secondary">Explore Arsenal</a>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <span>SCROLL TO UNSHEATHE</span>
+    <svg width="16" height="24" viewBox="0 0 16 24"><path d="M8 0 L8 20 M2 14 L8 20 L14 14" stroke="#C8A951" stroke-width="1.5" fill="none"/></svg>
+  </div>
+</section>
+
+<!-- ═══════════ FEATURES ═══════════ -->
+<section id="features">
+  <div class="section-bg-pattern"></div>
+  <div class="corner-decoration corner-tl"></div>
+  <div class="corner-decoration corner-tr"></div>
+  <div class="corner-decoration corner-bl"></div>
+  <div class="corner-decoration corner-br"></div>
+
+  <h2 class="section-title reveal">The Arsenal</h2>
+  <p class="section-kanji reveal">武器庫 — Every tool you need, forged for battle</p>
+
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <span class="feature-icon">🎬</span>
+      <div class="feature-title">Video Editing</div>
+      <p class="feature-desc">Professional-grade video cutting, trimming, and splicing. Multi-track timeline editing with frame-perfect precision.</p>
+      <div class="feature-kanji-bg">動</div>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">🖼</span>
+      <div class="feature-title">Photo Editing</div>
+      <p class="feature-desc">Layer-based photo manipulation, retouching, color grading and masking tools rivaling premium software.</p>
+      <div class="feature-kanji-bg">写</div>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">🎨</span>
+      <div class="feature-title">Color Grading</div>
+      <p class="feature-desc">Cinematic LUTs, curve adjustments, HSL tools and a full color wheel — transform the mood of any frame.</p>
+      <div class="feature-kanji-bg">色</div>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">✂️</span>
+      <div class="feature-title">Background Remove</div>
+      <p class="feature-desc">AI-powered background removal for photos and videos. One click, perfect edges, zero cost.</p>
+      <div class="feature-kanji-bg">切</div>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">🔤</span>
+      <div class="feature-title">Text & Captions</div>
+      <p class="feature-desc">Animated titles, subtitles, and text overlays with full typography control and motion presets.</p>
+      <div class="feature-kanji-bg">文</div>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">🎵</span>
+      <div class="feature-title">Audio Tools</div>
+      <p class="feature-desc">Noise reduction, equalizer, audio sync, and voiceover recording. Complete audio mastering suite.</p>
+      <div class="feature-kanji-bg">音</div>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">📤</span>
+      <div class="feature-title">Export Anywhere</div>
+      <p class="feature-desc">Export in MP4, MOV, WEBM, PNG, JPG, PSD and more. Optimised presets for every platform.</p>
+      <div class="feature-kanji-bg">送</div>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">⚡</span>
+      <div class="feature-title">100% Free</div>
+      <p class="feature-desc">No watermarks. No subscriptions. No hidden fees. The way a true samurai's code demands — honour above profit.</p>
+      <div class="feature-kanji-bg">無</div>
+    </div>
+  </div>
+</section>
+
+<div class="kamon-divider"><span>⛩</span></div>
+
+<!-- ═══════════ TOOLS ═══════════ -->
+<section id="tools">
+  <h2 class="section-title reveal">Weapon Rack</h2>
+  <p class="section-kanji reveal">道具棚 — Complete toolset breakdown</p>
+
+  <div class="tools-tabs">
+    <button class="tab-btn active" onclick="switchTab('video')">Video 動画</button>
+    <button class="tab-btn" onclick="switchTab('photo')">Photo 写真</button>
+    <button class="tab-btn" onclick="switchTab('effects')">Effects 効果</button>
+  </div>
+
+  <div id="tab-video" class="tools-panel active">
+    <div class="tools-list reveal">
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Multi-Track Timeline</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Speed Ramp</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Video Stabilizer</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Green Screen / Chroma</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Keyframe Animation</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Transitions Library</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">4K Export</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Audio Ducking</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Picture-in-Picture</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Frame Extraction</span></div>
+    </div>
+  </div>
+
+  <div id="tab-photo" class="tools-panel">
+    <div class="tools-list reveal">
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Layer System</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Healing Brush</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Clone Stamp</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Pen Tool / Path</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Smart Filters</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">AI Object Remove</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">RAW Processing</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Dodge & Burn</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Frequency Sep.</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Batch Processing</span></div>
+    </div>
+  </div>
+
+  <div id="tab-effects" class="tools-panel">
+    <div class="tools-list reveal">
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Particle Systems</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Glitch Effects</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Cinematic LUTs</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Light Leaks</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Film Grain</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Bloom & Glow</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Motion Blur</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Vignette Control</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">Lens Distortion</span></div>
+      <div class="tool-item"><span class="tool-dot"></span><span class="tool-name">VHS / Retro</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="kamon-divider"><span>⚔</span></div>
+
+<!-- ═══════════ HOW IT WORKS ═══════════ -->
+<section id="how">
+  <h2 class="section-title reveal">The Way of the Editor</h2>
+  <p class="section-kanji reveal">編集の道 — Simple steps, master results</p>
+
+  <div class="steps-timeline">
+    <div class="step-item reveal">
+      <div class="step-num">一</div>
+      <div class="step-content">
+        <div class="step-title">Upload Your File</div>
+        <p class="step-desc">Send your photo or video file to <span class="inline-red">washiowashi143@gmail.com</span> or use the upload portal below. We accept all major formats — MP4, MOV, JPG, PNG, RAW and more.</p>
+      </div>
+    </div>
+    <div class="step-item reveal">
+      <div class="step-num">二</div>
+      <div class="step-content">
+        <div class="step-title">State Your Vision</div>
+        <p class="step-desc">Tell us exactly what editing you need — colour grade, cuts, retouching, background removal, effects. Be as detailed or as brief as you wish. The blade follows your command.</p>
+      </div>
+    </div>
+    <div class="step-item reveal">
+      <div class="step-num">三</div>
+      <div class="step-content">
+        <div class="step-title">We Edit, You Review</div>
+        <p class="step-desc">Our team processes your file with professional tools. You receive the edited version delivered back to your email, ready for download and use.</p>
+      </div>
+    </div>
+    <div class="step-item reveal">
+      <div class="step-num">四</div>
+      <div class="step-content">
+        <div class="step-title">Download & Conquer</div>
+        <p class="step-desc">Get your finished masterpiece. Completely free. No watermarks, no subscriptions. Just results worthy of a samurai.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="kamon-divider"><span>🌸</span></div>
+
+<!-- ═══════════ UPLOAD SECTION ═══════════ -->
+<section id="upload">
+  <div class="corner-decoration corner-tl"></div>
+  <div class="corner-decoration corner-tr"></div>
+
+  <h2 class="section-title reveal">Submit Your Work</h2>
+  <p class="section-kanji reveal">作業提出 — Upload for free editing</p>
+
+  <div class="upload-arena reveal">
+    <div class="upload-box" id="dropZone" onclick="openModal()">
+      <div class="upload-icon">⚔</div>
+      <div class="upload-title">Drop Your File Here or Click to Upload</div>
+      <div class="upload-sub">Your file will be sent to our editing team</div>
+      <button class="btn-primary" style="margin-top:16px;" onclick="openModal()">Open Upload Portal</button>
+      <div class="upload-accepted">
+        <span class="upload-tag">MP4</span>
+        <span class="upload-tag">MOV</span>
+        <span class="upload-tag">AVI</span>
+        <span class="upload-tag">JPG</span>
+        <span class="upload-tag">PNG</span>
+        <span class="upload-tag">RAW</span>
+        <span class="upload-tag">PSD</span>
+        <span class="upload-tag">WEBM</span>
+      </div>
+    </div>
+    <p class="email-note">Or send directly to <a href="mailto:washiowashi143@gmail.com">washiowashi143@gmail.com</a></p>
+  </div>
+</section>
+
+<!-- ═══════════ STATS ═══════════ -->
+<section id="stats">
+  <div class="stats-grid">
+    <div class="stat-item reveal">
+      <span class="stat-number">100%</span>
+      <div class="stat-label">FREE — 永遠無料</div>
+    </div>
+    <div class="stat-item reveal">
+      <span class="stat-number">0</span>
+      <div class="stat-label">WATERMARKS — 透かしなし</div>
+    </div>
+    <div class="stat-item reveal">
+      <span class="stat-number">4K</span>
+      <div class="stat-label">EXPORT QUALITY — 解像度</div>
+    </div>
+    <div class="stat-item reveal">
+      <span class="stat-number">∞</span>
+      <div class="stat-label">POSSIBILITIES — 可能性</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer>
+  <div class="footer-logo">NVS EDITOR</div>
+  <div class="footer-kanji">侍の編集者 — Samurai Editor</div>
+  <ul class="footer-links">
+    <li><a href="#features">Arsenal</a></li>
+    <li><a href="#tools">Tools</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#upload">Upload</a></li>
+    <li><a href="mailto:washiowashi143@gmail.com">Contact</a></li>
+  </ul>
+  <p class="footer-copy">© 2025 NVS Editor — 無料動画・写真編集 — All Rights Reserved</p>
+</footer>
+
+<!-- ═══════════ UPLOAD MODAL ═══════════ -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">Upload for Free Editing</div>
+    <div class="modal-kanji">無料編集申込 — Submit your file</div>
+
+    <!-- FormSubmit.co — sends email + file attachment directly to Gmail -->
+    <form
+      id="nvs-form"
+      action="https://formsubmit.co/washiowashi143@gmail.com"
+      method="POST"
+      enctype="multipart/form-data"
+    >
+      <!-- FormSubmit hidden config -->
+      <input type="hidden" name="_subject" value="⚔ NVS Editor — New Editing Request">
+      <input type="hidden" name="_captcha" value="false">
+      <input type="hidden" name="_template" value="box">
+      <input type="hidden" name="_next" value="https://nvs-editor-thanks.netlify.app">
+
+      <div class="modal-input-group">
+        <label>YOUR NAME — お名前</label>
+        <input type="text" name="name" placeholder="Enter your name..." required>
+      </div>
+      <div class="modal-input-group">
+        <label>YOUR EMAIL — メールアドレス (we'll send you the edited file)</label>
+        <input type="email" name="email" placeholder="your@email.com" required>
+      </div>
+      <div class="modal-input-group">
+        <label>EDITING INSTRUCTIONS — 編集指示</label>
+        <textarea name="instructions" placeholder="Describe what editing you need (colour grade, cuts, remove background, etc.)..."></textarea>
+      </div>
+      <div class="modal-input-group">
+        <label>ATTACH FILE — ファイル添付</label>
+        <div class="modal-file-upload" id="fileDropArea">
+          <input
+            type="file"
+            name="attachment"
+            id="file-input"
+            accept="image/*,video/*,.psd,.raw,.mp4,.mov,.avi,.webm"
+            onchange="handleFileSelect(event)"
+          >
+          <div class="modal-file-text" id="fileLabel">📎 Click to select photo or video file</div>
+        </div>
+        <div id="selected-files-list"></div>
+      </div>
+
+      <!-- Size warning -->
+      <div id="size-warning" style="display:none;color:var(--crimson);font-family:'Sawarabi Mincho',serif;font-size:0.75rem;margin-bottom:12px;padding:8px;border:1px solid var(--crimson);background:rgba(139,0,0,0.1);">
+        ⚠ File exceeds 25MB. Please use
+        <a href="https://drive.google.com/drive/folders/1L5ji3sOxaPXF_xvFb82ETkdzP0hwGXsm" target="_blank" style="color:var(--gold);">this Drive folder</a>
+        to upload large files, then mention the filename in the instructions above.
+      </div>
+
+      <button type="submit" class="modal-submit" id="submitBtn">⚔ SEND FOR EDITING 送信</button>
+      <p class="modal-note">
+        Sent directly to <span style="color:var(--crimson)">washiowashi143@gmail.com</span> with your file attached · 100% Free · No watermarks<br>
+        <span style="font-size:0.65rem;opacity:0.5;">First submission activates your inbox — check Gmail for a confirmation email from FormSubmit</span>
+      </p>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════ TOAST ═══════════ -->
+<div class="toast" id="toast">⚔ Request sent! We'll edit your file and reply to your email.</div>
+
+
+<script>
+/* ═══════════════════════════════════════════
+   SAMURAI CANVAS ANIMATION
+═══════════════════════════════════════════ */
+const canvas = document.getElementById('samurai-canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+/* — — Falling Leaves — — */
+const leaves = [];
+const LEAF_CHARS = ['🍂', '🍁', '🌿'];
+
+function spawnLeaf() {
+  const el = document.createElement('div');
+  el.className = 'leaf';
+  el.textContent = LEAF_CHARS[Math.floor(Math.random() * LEAF_CHARS.length)];
+  el.style.left = Math.random() * 100 + 'vw';
+  const dur = 6 + Math.random() * 8;
+  el.style.animationDuration = dur + 's';
+  el.style.animationDelay = Math.random() * 4 + 's';
+  el.style.fontSize = (10 + Math.random() * 16) + 'px';
+  el.style.opacity = (0.4 + Math.random() * 0.5).toString();
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), (dur + 4) * 1000);
+}
+
+for (let i = 0; i < 18; i++) setTimeout(spawnLeaf, i * 500);
+setInterval(spawnLeaf, 1800);
+
+/* — — Samurai Canvas Drawing — — */
+let scrollProgress = 0;
+let animFrame = 0;
+let walkCycle = 0;
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+// Moon
+function drawMoon(t) {
+  const cx = canvas.width * 0.78, cy = canvas.height * 0.22;
+  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 90);
+  grd.addColorStop(0, 'rgba(240,220,180,0.18)');
+  grd.addColorStop(0.6, 'rgba(200,160,80,0.10)');
+  grd.addColorStop(1, 'transparent');
+  ctx.beginPath();
+  ctx.arc(cx, cy, 90, 0, Math.PI * 2);
+  ctx.fillStyle = grd;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 48, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(240,220,170,0.13)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 35, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(200,169,81,0.15)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+// Mountains / landscape
+function drawLandscape() {
+  // distant mountains
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height * 0.65);
+  ctx.lineTo(canvas.width * 0.12, canvas.height * 0.35);
+  ctx.lineTo(canvas.width * 0.25, canvas.height * 0.50);
+  ctx.lineTo(canvas.width * 0.38, canvas.height * 0.28);
+  ctx.lineTo(canvas.width * 0.52, canvas.height * 0.45);
+  ctx.lineTo(canvas.width * 0.65, canvas.height * 0.32);
+  ctx.lineTo(canvas.width * 0.80, canvas.height * 0.48);
+  ctx.lineTo(canvas.width, canvas.height * 0.38);
+  ctx.lineTo(canvas.width, canvas.height);
+  ctx.lineTo(0, canvas.height);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(10,5,5,0.85)';
+  ctx.fill();
+
+  // closer hills
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height * 0.78);
+  ctx.bezierCurveTo(canvas.width*0.2, canvas.height*0.6, canvas.width*0.4, canvas.height*0.72, canvas.width*0.5, canvas.height*0.65);
+  ctx.bezierCurveTo(canvas.width*0.6, canvas.height*0.58, canvas.width*0.8, canvas.height*0.73, canvas.width, canvas.height*0.68);
+  ctx.lineTo(canvas.width, canvas.height);
+  ctx.lineTo(0, canvas.height);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(8,4,4,0.9)';
+  ctx.fill();
+
+  // ground
+  ctx.fillStyle = 'rgba(5,2,2,0.95)';
+  ctx.fillRect(0, canvas.height * 0.82, canvas.width, canvas.height * 0.18);
+
+  // fog layer
+  const fogGrd = ctx.createLinearGradient(0, canvas.height*0.7, 0, canvas.height*0.85);
+  fogGrd.addColorStop(0, 'transparent');
+  fogGrd.addColorStop(1, 'rgba(30,5,5,0.6)');
+  ctx.fillStyle = fogGrd;
+  ctx.fillRect(0, canvas.height*0.7, canvas.width, canvas.height*0.15);
+}
+
+// Atmospheric effects
+function drawAtmosphere(t) {
+  // Sky gradient
+  const skyGrd = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  skyGrd.addColorStop(0, 'rgba(2,0,0,1)');
+  skyGrd.addColorStop(0.3, 'rgba(20,3,3,1)');
+  skyGrd.addColorStop(0.6, 'rgba(40,8,5,1)');
+  skyGrd.addColorStop(1, 'rgba(10,2,2,1)');
+  ctx.fillStyle = skyGrd;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Stars
+  ctx.fillStyle = 'rgba(255,250,240,0.6)';
+  const starPositions = [
+    [0.1,0.08],[0.18,0.04],[0.3,0.12],[0.45,0.06],[0.55,0.03],
+    [0.62,0.15],[0.7,0.07],[0.85,0.05],[0.92,0.12],[0.05,0.18],
+    [0.4,0.02],[0.88,0.18],[0.15,0.25],[0.95,0.25]
+  ];
+  starPositions.forEach(([sx,sy],i) => {
+    const twinkle = 0.3 + 0.7*Math.abs(Math.sin(t*0.02 + i*0.7));
+    ctx.globalAlpha = twinkle * 0.5;
+    ctx.beginPath();
+    ctx.arc(sx*canvas.width, sy*canvas.height, 0.8 + Math.random()*0.8, 0, Math.PI*2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+// Torii gate silhouette (background)
+function drawTorii() {
+  ctx.fillStyle = 'rgba(60,8,8,0.35)';
+  const cx = canvas.width * 0.15, base = canvas.height * 0.65;
+  const w = 120, h = 90;
+  // pillars
+  ctx.fillRect(cx - w/2 + 8, base - h, 10, h);
+  ctx.fillRect(cx + w/2 - 18, base - h, 10, h);
+  // top beams
+  ctx.fillRect(cx - w/2 - 14, base - h, w + 28, 9);
+  ctx.fillRect(cx - w/2 - 4, base - h + 16, w + 8, 7);
+  // horizontal caps
+  ctx.beginPath();
+  ctx.moveTo(cx - w/2 - 14, base - h);
+  ctx.bezierCurveTo(cx - w/2, base - h - 18, cx + w/2, base - h - 18, cx + w/2 + 14, base - h);
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = 'rgba(60,8,8,0.35)';
+  ctx.stroke();
+}
+
+// Main samurai character drawn procedurally
+function drawSamurai(scroll) {
+  const w = canvas.width, h = canvas.height;
+  // Position: starts right, walks to center
+  const targetX = lerp(w * 0.75, w * 0.5, Math.min(scroll * 3, 1));
+  const sx = targetX;
+  const sy = h * 0.82; // feet at ground
+  const scale = Math.min(w, h) / 700;
+  const S = scale;
+
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  // Walk cycle
+  const walk = Math.sin(walkCycle);
+  const walkFast = scroll < 0.3; // walking phase
+  if (walkFast) walkCycle += 0.06;
+
+  // Phase determination
+  const isWalking = scroll < 0.3;
+  const isDrawing = scroll >= 0.3 && scroll < 0.65;
+  const isSwinging = scroll >= 0.65;
+  const drawProgress = isDrawing ? (scroll - 0.3) / 0.35 : isSwinging ? 1 : 0;
+  const swingProgress = isSwinging ? (scroll - 0.65) / 0.35 : 0;
+
+  // — — Body — —
+  // Legs (walking animation)
+  const legSwing = isWalking ? walk * 12 : 0;
+
+  // Back leg
+  ctx.save();
+  ctx.rotate((legSwing - 10) * Math.PI / 180);
+  // shin
+  ctx.fillStyle = '#111';
+  ctx.fillRect(-7*S, -60*S, 14*S, 65*S);
+  // armour shin guard
+  ctx.fillStyle = '#0a0a0a';
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 0.5;
+  ctx.fillRect(-9*S, -40*S, 18*S, 30*S);
+  ctx.strokeRect(-9*S, -40*S, 18*S, 30*S);
+  // foot
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(-10*S, 3*S, 22*S, 8*S);
+  ctx.restore();
+
+  // Front leg
+  ctx.save();
+  ctx.rotate((-legSwing + 8) * Math.PI / 180);
+  ctx.fillStyle = '#111';
+  ctx.fillRect(-7*S, -60*S, 14*S, 65*S);
+  ctx.fillStyle = '#0a0a0a';
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 0.5;
+  ctx.fillRect(-9*S, -40*S, 18*S, 30*S);
+  ctx.strokeRect(-9*S, -40*S, 18*S, 30*S);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(-10*S, 3*S, 22*S, 8*S);
+  ctx.restore();
+
+  // Hakama (skirt / armour skirt)
+  ctx.fillStyle = '#0d0d0d';
+  ctx.beginPath();
+  ctx.moveTo(-22*S, -60*S);
+  ctx.lineTo(22*S, -60*S);
+  ctx.lineTo(26*S, -10*S);
+  ctx.lineTo(-26*S, -10*S);
+  ctx.closePath();
+  ctx.fill();
+  // Armour plates on hakama
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = `rgba(15,15,15,${0.8 + i*0.05})`;
+    ctx.strokeStyle = 'rgba(50,50,50,0.5)';
+    ctx.lineWidth = 0.5;
+    const py = -58*S + i*13*S;
+    ctx.fillRect(-22*S + i*1*S, py, 44*S - i*2*S, 12*S);
+    ctx.strokeRect(-22*S + i*1*S, py, 44*S - i*2*S, 12*S);
+  }
+
+  // Torso / chest armour
+  ctx.fillStyle = '#0a0a0a';
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-20*S, -130*S);
+  ctx.lineTo(20*S, -130*S);
+  ctx.lineTo(24*S, -60*S);
+  ctx.lineTo(-24*S, -60*S);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Chest armour detail
+  ctx.fillStyle = '#111';
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 0.5;
+  // horizontal chest plates
+  for (let i = 0; i < 5; i++) {
+    const cy = -125*S + i*13*S;
+    ctx.fillRect(-18*S, cy, 36*S, 11*S);
+    ctx.strokeRect(-18*S, cy, 36*S, 11*S);
+  }
+  // red accent line on chest
+  ctx.fillStyle = 'rgba(139,0,0,0.8)';
+  ctx.fillRect(-18*S, -90*S, 36*S, 2*S);
+
+  // Shoulder armour (sode)
+  // Left shoulder
+  ctx.fillStyle = '#111';
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-20*S, -130*S);
+  ctx.lineTo(-38*S, -125*S);
+  ctx.lineTo(-42*S, -90*S);
+  ctx.lineTo(-22*S, -88*S);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Shoulder plates
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(-40*S + i*3, -124*S + i*13*S, 20*S - i*3, 12*S);
+    ctx.strokeRect(-40*S + i*3, -124*S + i*13*S, 20*S - i*3, 12*S);
+  }
+
+  // Right shoulder
+  ctx.beginPath();
+  ctx.moveTo(20*S, -130*S);
+  ctx.lineTo(38*S, -125*S);
+  ctx.lineTo(42*S, -90*S);
+  ctx.lineTo(22*S, -88*S);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(20*S + i*0, -124*S + i*13*S, 20*S - i*3, 12*S);
+    ctx.strokeRect(20*S + i*0, -124*S + i*13*S, 20*S - i*3, 12*S);
+  }
+
+  // Neck
+  ctx.fillStyle = '#1a1209';
+  ctx.fillRect(-7*S, -148*S, 14*S, 20*S);
+
+  // Head — Kabuto (samurai helmet)
+  const headBob = isWalking ? Math.sin(walkCycle * 2) * 2 : 0;
+  ctx.save();
+  ctx.translate(0, headBob*S);
+
+  // Helmet bowl
+  ctx.fillStyle = '#080808';
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(0, -175*S, 28*S, 32*S, 0, Math.PI, 0);
+  ctx.fill();
+  ctx.stroke();
+
+  // Shikoro (neck guard) - laminar plates
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = '#0d0d0d';
+    ctx.strokeStyle = '#1f1f1f';
+    ctx.lineWidth = 0.5;
+    const sw = 28 + i*8;
+    ctx.fillRect(-sw*S, -148*S + i*6*S, sw*2*S, 6*S);
+    ctx.strokeRect(-sw*S, -148*S + i*6*S, sw*2*S, 6*S);
+  }
+
+  // Maedate (front crest on helmet)
+  ctx.fillStyle = '#C8A951';
+  ctx.globalAlpha = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(0, -210*S);
+  ctx.lineTo(-6*S, -185*S);
+  ctx.lineTo(0, -190*S);
+  ctx.lineTo(6*S, -185*S);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Face — menpo (mask)
+  ctx.fillStyle = '#111';
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(0, -158*S, 18*S, 14*S, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Eye slot (angry slit)
+  ctx.fillStyle = '#8B0000';
+  ctx.beginPath();
+  ctx.ellipse(-7*S, -162*S, 6*S, 2.5*S, 0.2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(7*S, -162*S, 6*S, 2.5*S, -0.2, 0, Math.PI*2);
+  ctx.fill();
+  // Eye glow
+  ctx.fillStyle = 'rgba(220,20,60,0.8)';
+  ctx.beginPath();
+  ctx.ellipse(-7*S, -162*S, 4*S, 1.5*S, 0.2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(7*S, -162*S, 4*S, 1.5*S, -0.2, 0, Math.PI*2);
+  ctx.fill();
+  // Eye glow aura
+  ctx.shadowColor = '#DC143C';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = 'rgba(220,20,60,0.5)';
+  ctx.beginPath();
+  ctx.ellipse(-7*S, -162*S, 5*S, 2*S, 0.2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(7*S, -162*S, 5*S, 2*S, -0.2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.restore(); // end head bob
+
+  // — — ARMS — —
+  // Arm position depends on scroll phase
+  // Left arm: down then rises for sword draw
+  const leftArmRot = isWalking ? walk * 8 : lerp(0, -80, easeInOut(drawProgress));
+  const rightArmRot = isWalking ? -walk * 8 : lerp(-10, 40, easeInOut(drawProgress));
+
+  // Left arm
+  ctx.save();
+  ctx.translate(-20*S, -120*S);
+  ctx.rotate(leftArmRot * Math.PI / 180);
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(-7*S, 0, 14*S, 50*S);
+  // forearm armour
+  ctx.fillStyle = '#111';
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.lineWidth = 0.5;
+  ctx.fillRect(-8*S, 15*S, 16*S, 25*S);
+  ctx.strokeRect(-8*S, 15*S, 16*S, 25*S);
+  // gauntlet
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(-8*S, 40*S, 16*S, 14*S);
+  ctx.strokeRect(-8*S, 40*S, 16*S, 14*S);
+  ctx.restore();
+
+  // Right arm
+  ctx.save();
+  ctx.translate(20*S, -120*S);
+  ctx.rotate(rightArmRot * Math.PI / 180);
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(-7*S, 0, 14*S, 50*S);
+  ctx.fillStyle = '#111';
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.lineWidth = 0.5;
+  ctx.fillRect(-8*S, 15*S, 16*S, 25*S);
+  ctx.strokeRect(-8*S, 15*S, 16*S, 25*S);
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(-8*S, 40*S, 16*S, 14*S);
+  ctx.strokeRect(-8*S, 40*S, 16*S, 14*S);
+  ctx.restore();
+
+  // — — KATANA — —
+  // Sword at hip when walking, being drawn, then swinging
+  const swordHipX = 30*S;
+  const swordHipY = -80*S;
+
+  if (isWalking || drawProgress < 0.05) {
+    // Sheathed katana at hip
+    ctx.save();
+    ctx.translate(swordHipX, swordHipY);
+    ctx.rotate(-0.3);
+    // Saya (scabbard)
+    ctx.fillStyle = '#1a0000';
+    ctx.strokeStyle = '#3a0000';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(-5*S, 0, 10*S, 80*S, 3*S);
+    ctx.fill();
+    ctx.stroke();
+    // Tsuba (guard) hint
+    ctx.fillStyle = '#C8A951';
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(-8*S, -3*S, 16*S, 6*S);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  } else {
+    // Drawn & swinging
+    const drawAngle = lerp(-Math.PI * 0.6, isSwinging ? lerp(-Math.PI*0.1, Math.PI*0.9, easeInOut(swingProgress)) : -Math.PI * 0.1, easeInOut(drawProgress));
+    const handX = lerp(-20, -10, easeInOut(drawProgress)) * S;
+    const handY = lerp(-90, -140, easeInOut(drawProgress)) * S;
+
+    ctx.save();
+    ctx.translate(handX, handY);
+    ctx.rotate(drawAngle);
+
+    // Glow effect on blade
+    if (drawProgress > 0.5) {
+      ctx.shadowColor = 'rgba(220,20,60,0.9)';
+      ctx.shadowBlur = 20 * easeInOut(drawProgress);
+    }
+
+    // Handle (tsuka)
+    ctx.fillStyle = '#1a0a00';
+    ctx.strokeStyle = '#C8A951';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.roundRect(-5*S, 0, 10*S, 28*S, 2*S);
+    ctx.fill();
+    ctx.stroke();
+    // Diamond wrap
+    ctx.strokeStyle = 'rgba(200,169,81,0.6)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-5*S, 5*S + i*5*S);
+      ctx.lineTo(5*S, 8*S + i*5*S);
+      ctx.stroke();
+    }
+
+    // Tsuba (guard)
+    ctx.fillStyle = '#C8A951';
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(-9*S, 26*S, 18*S, 5*S);
+    ctx.globalAlpha = 1;
+
+    // Blade
+    ctx.fillStyle = '#e8e0d0';
+    ctx.strokeStyle = 'rgba(200,220,255,0.5)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(-2*S, 30*S);
+    ctx.lineTo(2*S, 30*S);
+    ctx.lineTo(0.5*S, 30*S + 120*S);
+    ctx.lineTo(-0.5*S, 30*S + 120*S);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Blade shine
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.beginPath();
+    ctx.moveTo(-0.5*S, 32*S);
+    ctx.lineTo(0.5*S, 32*S);
+    ctx.lineTo(0, 30*S + 110*S);
+    ctx.closePath();
+    ctx.fill();
+
+    // Blade tip flash during swing
+    if (isSwinging && swingProgress > 0.2) {
+      ctx.globalAlpha = swingProgress * 0.7;
+      ctx.fillStyle = 'rgba(220,20,60,0.8)';
+      ctx.beginPath();
+      ctx.arc(0, 30*S + 120*S, 12*S, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // Swing trail
+    if (isSwinging && swingProgress > 0.1) {
+      ctx.save();
+      ctx.globalAlpha = (1 - swingProgress) * 0.5;
+      ctx.strokeStyle = 'rgba(220,20,60,0.8)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      const trailR = 130*S;
+      const startA = -Math.PI * 0.3 + drawAngle - Math.PI * 0.4;
+      ctx.arc(handX, handY, trailR, startA, startA + swingProgress * Math.PI * 0.6);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+
+  ctx.restore(); // end samurai translate
+}
+
+// Main render loop
+function render(ts) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  animFrame = ts;
+
+  drawAtmosphere(ts);
+  drawMoon(ts);
+  drawTorii();
+  drawLandscape();
+  drawSamurai(scrollProgress);
+
+  // Vignette
+  const vgrd = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height*0.3, canvas.width/2, canvas.height/2, canvas.height*0.8);
+  vgrd.addColorStop(0, 'transparent');
+  vgrd.addColorStop(1, 'rgba(0,0,0,0.6)');
+  ctx.fillStyle = vgrd;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+
+/* ═══════════════════════════════════════════
+   SCROLL HANDLING
+═══════════════════════════════════════════ */
+let ticking = false;
+window.addEventListener('scroll', () => {
+  if (!ticking) {
+    requestAnimationFrame(() => {
+      const heroEl = document.getElementById('hero');
+      const heroH = heroEl.offsetHeight;
+      const scrolled = window.scrollY;
+      scrollProgress = Math.min(Math.max(scrolled / heroH, 0), 1);
+
+      // Sword progress bar
+      const total = document.body.scrollHeight - window.innerHeight;
+      const pct = (scrolled / total) * 100;
+      document.getElementById('swordFill').style.height = pct + '%';
+
+      ticking = false;
+    });
+    ticking = true;
+  }
+});
+
+/* ═══════════════════════════════════════════
+   SLASH EFFECT ON CLICK
+═══════════════════════════════════════════ */
+document.addEventListener('click', (e) => {
+  const line = document.createElement('div');
+  line.className = 'slash-line';
+  line.style.left = e.clientX + 'px';
+  line.style.top = '0';
+  line.style.height = '0';
+  document.getElementById('slashOverlay').appendChild(line);
+  line.animate([
+    { height: '0', top: e.clientY + 'px', opacity: 0.9 },
+    { height: '200px', top: (e.clientY - 100) + 'px', opacity: 0 }
+  ], { duration: 400, easing: 'ease-out' }).onfinish = () => line.remove();
+});
+
+/* ═══════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════ */
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tools-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+/* ═══════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════ */
+function openModal() {
+  document.getElementById('uploadModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('uploadModal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('uploadModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  const listEl = document.getElementById('selected-files-list');
+  const warning = document.getElementById('size-warning');
+  const label = document.getElementById('fileLabel');
+
+  if (!file) {
+    listEl.textContent = '';
+    label.textContent = '📎 Click to select photo or video file';
+    warning.style.display = 'none';
+    return;
+  }
+
+  const sizeMB = file.size / (1024 * 1024);
+  label.textContent = '✅ ' + file.name;
+  listEl.textContent = '⚔ ' + file.name + ' (' + sizeMB.toFixed(1) + ' MB)';
+
+  if (sizeMB > 25) {
+    warning.style.display = 'block';
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').style.opacity = '0.4';
+  } else {
+    warning.style.display = 'none';
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').style.opacity = '1';
+  }
+}
+
+// Handle form submit feedback
+document.getElementById('nvs-form').addEventListener('submit', function(e) {
+  const btn = document.getElementById('submitBtn');
+  btn.textContent = '⏳ Sending... 送信中';
+  btn.disabled = true;
+  showToast('⚔ Sending your file — please wait...');
+  // FormSubmit will redirect after successful send
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+/* ═══════════════════════════════════════════
+   REVEAL ON SCROLL
+═══════════════════════════════════════════ */
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+</script>
+</body>
+</html>
